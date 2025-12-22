@@ -1,0 +1,7 @@
+ColumnLimit: 120
+IndentWidth: 4
+AlignConsecutiveAssignments: Consecutive
+AlignConsecutiveBitFields: AcrossEmptyLinesAndComments
+AlignConsecutiveDeclarations: Consecutive
+AlignConsecutiveMacros: Consecutive
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse

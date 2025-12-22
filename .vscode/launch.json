@@ -1,0 +1,51 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "attach",
+            "name": "Attach",
+            "pid": "${command:pickMyProcess}" // use ${command:pickProcess} to pick other users' processes
+        },
+        {
+            "name": "Launch propd",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceRoot}/build/bin/propd",
+            "args": [
+                "--loglevel=DEBUG",
+                "--enable-cache",
+                "1 ",
+                "--file",
+                "/tmp/propd.file.c/,file.c,c.*",
+                "--children",
+                "file",
+            ],
+            "cwd": "${workspaceRoot}",
+            "env": {
+                "LD_LIBRARY_PATH": "${workspaceRoot}/build/lib"
+            }
+        },
+        {
+            "name": "Launch prop",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceRoot}/build/bin/prop",
+            "args": [
+                "ctrl",
+                "register_child",
+                "file",
+                "a.*",
+                "b.*",
+                "d.*",
+            ],
+            "cwd": "${workspaceRoot}",
+            "env": {
+                "LD_LIBRARY_PATH": "${workspaceRoot}/build/lib",
+            }
+        }
+    ]
+}
