@@ -42,10 +42,10 @@ struct propd_config {
 
     const char *namespace; /* Unix Sockets root path. /tmp default */
 
-    unsigned short thread_num;             /* 0 default, means auto  */
+    unsigned short thread_num;             /* 0 default (0 means auto)  */
     unsigned short thread_num_max_if_auto; /* 16 default */
 
-    timestamp_t cache_interval;         /* 0 if disable, 0 default, unit: s */
+    timestamp_t cache_interval;         /* 0 default, unit: s (0 means disable) */
     timestamp_t cache_default_duration; /* 1 default, unit: s */
 
     struct route_list local_route;
@@ -62,7 +62,7 @@ typedef struct propd_config propd_config_t;
 
 void propd_config_default(propd_config_t *config);
 void propd_config_parse(propd_config_t *config, int argc, char *argv[]);
-int  propd_register(io_t io, const char *name, uint32_t num_prefix, const char *prefix[]);
-int  propd_run(const propd_config_t *config);
+int propd_config_register(propd_config_t *config, io_t io, const char *name, uint32_t num_prefix, const char *prefix[]);
+int propd_run(const propd_config_t *config);
 
 #endif /* __PROPD_H */

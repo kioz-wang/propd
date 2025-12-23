@@ -77,14 +77,15 @@ static int io_connect(const char *target, int *connfd) {
         return ret;
     }
 
+    logfI(logFmtHead "connect %s as %d", target, _connfd);
     *connfd = _connfd;
     return ret;
 }
 
-static void io_disconnect(const int *connfd) {
-    shutdown(*connfd, SHUT_WR);
-    close(*connfd);
-    free((void *)connfd);
+static void io_disconnect(int connfd) {
+    shutdown(connfd, SHUT_WR);
+    close(connfd);
+    logfI(logFmtHead "disconnect %d", connfd);
 }
 
 static void io_begin(int connfd, io_type_t type, const char *key, const value_t *value) {
@@ -127,12 +128,15 @@ void unix_stream_discard(int connfd) {
     fcntl(connfd, F_SETFL, fl);
 }
 
-static int get(const int *_connfd, const char *key, const value_t **value, timestamp_t *duration) {
+static int get(const char *target, const char *key, const value_t **value, timestamp_t *duration) {
     int         ret    = 0;
-    int         connfd = *_connfd;
+    int         connfd = -1;
     timestamp_t _duration;
     value_t     value_head;
     value_t    *_value = NULL;
+
+    ret = io_connect(target, &connfd);
+    if (ret) return ret;
 
     io_begin(connfd, _io_get, key, NULL);
 
@@ -166,6 +170,8 @@ static int get(const int *_connfd, const char *key, const value_t **value, times
         goto exit;
     }
 
+    io_disconnect(connfd);
+
     *value    = _value;
     *duration = _duration;
 
@@ -180,46 +186,52 @@ exit:
     return ret;
 }
 
-static int set(const int *connfd, const char *key, const value_t *value) {
-    io_begin(*connfd, _io_set, key, value);
-    int ret = io_end(*connfd, key);
+static int set(const char *target, const char *key, const value_t *value) {
+    int ret    = 0;
+    int connfd = -1;
+
+    ret = io_connect(target, &connfd);
+    if (ret) return ret;
+
+    io_begin(connfd, _io_set, key, value);
+    ret = io_end(connfd, key);
     if (!ret) {
         char buffer[256];
         logfI(logFmtHead logFmtKey "set " logFmtValue, key, value_fmt(buffer, sizeof(buffer), value, false));
     }
+
+    io_disconnect(connfd);
     return ret;
 }
 
-static int del(const int *connfd, const char *key) {
-    io_begin(*connfd, _io_del, key, NULL);
-    int ret = io_end(*connfd, key);
+static int del(const char *target, const char *key) {
+    int ret    = 0;
+    int connfd = -1;
+
+    ret = io_connect(target, &connfd);
+    if (ret) return ret;
+
+    io_begin(connfd, _io_del, key, NULL);
+    ret = io_end(connfd, key);
     if (!ret) {
         logfI(logFmtHead logFmtKey "del", key);
     }
+
+    io_disconnect(connfd);
     return ret;
 }
 
 io_t bridge_unix(const char *target) {
     io_t io = BRIDGE_INITIALIZER;
 
-    int *connfd = (int *)malloc(sizeof(int));
-    if (!connfd) {
+    if (!(io.priv = strdup(target))) {
         logfE(logFmtHead "fail to allocate priv" logFmtErrno, logArgErrno);
         return io;
     }
 
-    int ret = io_connect(target, connfd);
-    if (ret) {
-        logfE(logFmtHead "fail to connect %s" logFmtRet, target, ret);
-        free(connfd);
-        return io;
-    }
-    logfI(logFmtHead "connect %s as %d", target, *connfd);
-
-    io.priv   = connfd;
     io.get    = (typeof(io.get))get;
     io.set    = (typeof(io.set))set;
     io.del    = (typeof(io.del))del;
-    io.deinit = (typeof(io.deinit))io_disconnect;
+    io.deinit = free;
     return io;
 }

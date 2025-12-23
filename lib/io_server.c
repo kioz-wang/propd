@@ -194,10 +194,9 @@ struct io_conn_arg {
 };
 typedef struct io_conn_arg io_conn_arg_t;
 
-typedef io_conn_arg_t io_conn_cleanup_ctx_t;
-static void           io_conn_cleanup(io_conn_cleanup_ctx_t *ctx) {
-    close(ctx->connfd);
-    free(ctx);
+static void io_conn_cleanup(io_conn_arg_t *arg) {
+    close(arg->connfd);
+    free(arg);
 }
 
 static int io_conn(io_conn_arg_t *arg) {
@@ -237,101 +236,97 @@ static int io_conn(io_conn_arg_t *arg) {
         assert(n == sizeof(result)); /* TODO pthread_exit */
         logfD(logFmtHead logFmtKey ">>>%d send result" logFmtRet, key, connfd, result);
     }
+
     pthread_cleanup_pop(true);
     return result;
 }
 
-typedef struct {
-    const int  *listenfd;
-    const char *path;
-} io_server_cleanup_ctx_t;
-static void io_server_cleanup(io_server_cleanup_ctx_t *ctx) {
-    if (*ctx->listenfd) close(*ctx->listenfd);
-    if (ctx->path) unlink(ctx->path);
+struct io_server_arg {
+    struct sockaddr_un servaddr;
+    int                listenfd;
+};
+typedef struct io_server_arg io_server_arg_t;
+
+static void io_server_cleanup(io_server_arg_t *arg) {
+    unlink(arg->servaddr.sun_path);
+    close(arg->listenfd);
+    free(arg);
 }
 
-static void *io_server(io_server_t *ctx) {
-    int ret = 0;
-
-    io_server_cleanup_ctx_t cleanup_ctx = {0};
-    pthread_cleanup_push((void (*)(void *))io_server_cleanup, &cleanup_ctx);
-
-    struct sockaddr_un servaddr = {0};
-    int                listenfd = socket(AF_LOCAL, SOCK_STREAM, 0);
-    if (listenfd == -1) {
-        logfE(logFmtHead "fail to get socket" logFmtErrno, logArgErrno);
-        goto exit;
-    }
-    cleanup_ctx.listenfd = &listenfd;
-
-    servaddr.sun_family = AF_LOCAL;
-    snprintf(servaddr.sun_path, sizeof(servaddr.sun_path), PathFmt_IOServer, g_at, ctx->name);
-    ret = bind(listenfd, (const struct sockaddr *)&servaddr, sizeof(servaddr));
-    if (ret) {
-        logfE(logFmtHead "fail to bind %s" logFmtErrno, servaddr.sun_path, logArgErrno);
-        goto exit;
-    }
-    listen(listenfd, 5);
-    logfI(logFmtHead "listen at %s", servaddr.sun_path);
-    cleanup_ctx.path = servaddr.sun_path;
+static void *io_server(io_server_arg_t *arg) {
+    pthread_cleanup_push((void (*)(void *))io_server_cleanup, arg);
 
     for (;;) {
         struct sockaddr_un cliaddr = {0};
         int                connfd  = -1;
 
-        io_conn_arg_t *arg = (io_conn_arg_t *)malloc(sizeof(io_conn_arg_t));
-        if (!arg) {
+        io_conn_arg_t *io_conn_arg = (io_conn_arg_t *)malloc(sizeof(io_conn_arg_t));
+        if (!io_conn_arg) {
             logfE(logFmtHead "fail to allocate io_conn_arg" logFmtErrno, logArgErrno);
             break;
         }
 
-        if ((connfd = accept(listenfd, (struct sockaddr *)&cliaddr, &(socklen_t){sizeof(cliaddr)})) < 0) {
+        if ((connfd = accept(arg->listenfd, (struct sockaddr *)&cliaddr, &(socklen_t){sizeof(cliaddr)})) < 0) {
             logfE(logFmtHead "fail to accept" logFmtErrno, logArgErrno);
-            free(arg);
+            free(io_conn_arg);
             if (errno == EINTR) continue;
             break;
         }
 
-        arg->connfd = connfd;
-        getsockopt(connfd, SOL_SOCKET, SO_PEERCRED, &arg->cred, &(socklen_t){sizeof(arg->cred)});
-        logfV(logFmtHead "accept p%d,u%d,g%d path %s as %d", arg->cred.pid, arg->cred.uid, arg->cred.gid,
-              cliaddr.sun_path[0] ? cliaddr.sun_path : "?", connfd);
-        thread_pool_submit(g_pool, (int (*)(void *))io_conn, arg, false);
+        io_conn_arg->connfd = connfd;
+        getsockopt(connfd, SOL_SOCKET, SO_PEERCRED, &io_conn_arg->cred, &(socklen_t){sizeof(io_conn_arg->cred)});
+        logfV(logFmtHead "accept p%d,u%d,g%d path %s as %d", io_conn_arg->cred.pid, io_conn_arg->cred.uid,
+              io_conn_arg->cred.gid, cliaddr.sun_path[0] ? cliaddr.sun_path : "?", connfd);
+        thread_pool_submit(g_pool, (int (*)(void *))io_conn, io_conn_arg, false);
     }
 
-exit:
     pthread_cleanup_pop(true);
     return NULL;
 }
 
-io_server_t *io_start_server(const char *name, bool join) {
-    int ret = 0;
+int io_start_server(const char *name, pthread_t *tid) {
+    int              ret = 0;
+    io_server_arg_t *arg = (io_server_arg_t *)calloc(1, sizeof(io_server_arg_t));
+    if (!arg) return errno;
 
-    io_server_t *ctx = (io_server_t *)calloc(1, sizeof(io_server_t));
-    if (!ctx) return NULL;
-
-    ctx->name = strdup(name);
-    if (!ctx->name) {
-        free(ctx);
-        return NULL;
+    arg->listenfd = socket(AF_LOCAL, SOCK_STREAM, 0);
+    if (arg->listenfd == -1) {
+        logfE(logFmtHead "fail to get socket" logFmtErrno, logArgErrno);
+        goto exit_ctx;
     }
 
-    ret = pthread_create(&ctx->tid, NULL, (void *(*)(void *))io_server, ctx);
+    struct sockaddr_un *servaddr = &arg->servaddr;
+    bzero(servaddr, sizeof(struct sockaddr_un));
+    servaddr->sun_family = AF_LOCAL;
+    snprintf(servaddr->sun_path, sizeof(servaddr->sun_path), PathFmt_IOServer, g_at, name);
+    ret = bind(arg->listenfd, (const struct sockaddr *)servaddr, sizeof(*servaddr));
+    if (ret) {
+        logfE(logFmtHead "fail to bind %s" logFmtErrno, servaddr->sun_path, logArgErrno);
+        goto exit_listenfd;
+    }
+    listen(arg->listenfd, 5);
+    logfI(logFmtHead "listen at %s", servaddr->sun_path);
+
+    pthread_t _tid;
+    ret = pthread_create(&_tid, NULL, (void *(*)(void *))io_server, arg);
     if (ret) {
         logfE(logFmtHead "fail to pthread_create" logFmtRet, ret);
-        free((void *)ctx->name);
-        free(ctx);
-        return NULL;
+        goto exit_sun_path;
     }
-    if (join) pthread_join(ctx->tid, NULL);
-    else pthread_detach(ctx->tid);
-    return ctx;
-}
 
-void io_stop_server(io_server_t *ctx) {
-    if (ctx) {
-        pthread_cancel(ctx->tid);
-        free((void *)ctx->name);
-        free(ctx);
+    if (tid) {
+        pthread_detach(_tid);
+        *tid = _tid;
+    } else {
+        pthread_join(_tid, NULL);
     }
+    return 0;
+
+exit_sun_path:
+    unlink(arg->servaddr.sun_path);
+exit_listenfd:
+    close(arg->listenfd);
+exit_ctx:
+    free(arg);
+    return errno;
 }

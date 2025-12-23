@@ -94,7 +94,7 @@ static void help_message(void) {
         " [--tcp <IP>,<PORT>,<NAME>,<PREFIXES>]"
         " [--unix <NAME>,<PREFIXES>]\n"
         "\n"
-        "  --loglevel <LOGLEVEL>         指定日志等级（取值（大小写不敏感）：ERROR|WARN|INFO|VERB|DEBUG；默认：INFO）\n"
+        "  --loglevel <LOGLEVEL>         指定日志等级（取值（大小写不敏感）：ERRO|WARN|INFO|VERB|DEBG；默认：INFO）\n"
         "  --namespace <DIR>             指定Unix域套接字的根路径（默认：/tmp）\n"
         "  --enable-cache <INTERVAL>     使能cache，并设定过期回收的间隔（默认：0 不使能；单位：秒）\n"
         "  --default-duration <INTERVAL> 设定默认的cache有效期（默认：1；单位：秒）\n"
@@ -374,24 +374,23 @@ int propd_run(const propd_config_t *config) {
         }
     }
 
-    const char    *name = config->name ? config->name : "root";
-    ctrl_server_t *ctrl = NULL;
-    io_server_t   *io   = NULL;
+    const char *name = config->name ? config->name : "root";
+    pthread_t   ctrl_tid, io_tid;
+    pthread_t  *ctrl_tid_p = NULL;
+    pthread_t  *io_tid_p   = NULL;
 
     if (!ret) {
-        io = io_start_server(name, false);
-        if (!io) {
+        ret = io_start_server(name, &io_tid);
+        if (ret) {
             logfE("fail to start io server" logFmtErrno, logArgErrno);
-            ret = -1;
-        }
+        } else ctrl_tid_p = &ctrl_tid;
     }
 
     if (!ret) {
-        ctrl = ctrl_start_server(name, false, config->num_prefix_max, config->caches, config->prefixes);
-        if (!ctrl) {
+        ret = ctrl_start_server(name, config->num_prefix_max, config->caches, config->prefixes, &ctrl_tid);
+        if (ret) {
             logfE("fail to start ctrl server" logFmtErrno, logArgErrno);
-            ret = -1;
-        }
+        } else io_tid_p = &io_tid;
     }
 
     if (!ret && config->children) {
@@ -421,8 +420,8 @@ int propd_run(const propd_config_t *config) {
         if (getenv("PROPD_ATTACH")) dotwait('.', 2, 10);
     }
 
-    ctrl_stop_server(ctrl);
-    io_stop_server(io);
+    if (ctrl_tid_p) pthread_cancel(*ctrl_tid_p);
+    if (io_tid_p) pthread_cancel(*io_tid_p);
     if (g_route) {
         if (config->parents) {
             for (int i = 0; config->parents[i]; i++) {

@@ -117,32 +117,17 @@ int ctrl_dump_db_cache(const char *server, void **db);
 
 /* Server APIs */
 
-struct ctrl_server {
-    pthread_t    tid;
-    const char  *name;
-    uint32_t     num_prefix_max; /* as parent, limits recv buffer */
-    const char **cache_now;      /* as child */
-    const char **prefix;         /* as child */
-};
-typedef struct ctrl_server ctrl_server_t;
-
 /**
  * @brief Start ctrl server
  *
  * @param name server节点名
- * @param join
  * @param num_prefix_max
  * @param cache_now
  * @param prefix
- * @return ctrl_server_t* Server context
+ * @param tid 返回ctrl server线程id，用于终止；传入NULL时，阻塞等待
+ * @return int
  */
-ctrl_server_t *ctrl_start_server(const char *name, bool join, uint32_t num_prefix_max, const char *cache_now[],
-                                 const char *prefix[]);
-/**
- * @brief Stop ctrl server
- *
- * @param ctx Server context
- */
-void ctrl_stop_server(ctrl_server_t *ctx);
+int ctrl_start_server(const char *name, uint32_t num_prefix_max, const char *cache_now[], const char *prefix[],
+                      pthread_t *tid);
 
 #endif /* __PROPD_CTRL_SERVER_H */

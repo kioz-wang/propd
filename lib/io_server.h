@@ -34,7 +34,6 @@
 #include "timestamp.h"
 #include "value.h"
 #include <linux/limits.h>
-#include <pthread.h>
 #include <stdint.h>
 
 enum io_type {
@@ -54,25 +53,13 @@ typedef struct io_package io_package_t;
 
 /* Server APIs */
 
-struct io_server {
-    pthread_t   tid;
-    const char *name;
-};
-typedef struct io_server io_server_t;
-
 /**
  * @brief Start IO server
  *
  * @param name server节点名
- * @param join
- * @return io_server_t* Server context
+ * @param tid 返回IO server线程id，用于终止；传入NULL时，阻塞等待
+ * @return int
  */
-io_server_t *io_start_server(const char *name, bool join);
-/**
- * @brief Stop IO server
- *
- * @param ctx Server context
- */
-void io_stop_server(io_server_t *ctx);
+int io_start_server(const char *name, pthread_t *tid);
 
 #endif /* __PROPD_IO_SERVER_H */
