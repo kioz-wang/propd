@@ -80,15 +80,15 @@ void propd_config_default(propd_config_t *config) {
     config->caches         = NULL;
     config->prefixes       = NULL;
     config->num_prefix_max = 16;
-
-    config->children = NULL;
-    config->parents  = NULL;
+    config->children       = NULL;
+    config->parents        = NULL;
+    config->daemon         = false;
 }
 
 static void help_message(void) {
     // clang-format off
     const char *message =
-        "propd [--loglevel <LOGLEVEL>] [--namespace <DIR>] [--enable-cache <INTERVAL>] [--default-duration <INTERVAL>] [--name <NAME>] [--caches <KEYS>] [--prefixes <PREFIXES>] [--children <NAMES>] [--parents <NAMES>]"
+        "propd [--loglevel <LOGLEVEL>] [--namespace <DIR>] [--enable-cache <INTERVAL>] [--default-duration <INTERVAL>] [--name <NAME>] [--caches <KEYS>] [--prefixes <PREFIXES>] [--children <NAMES>] [--parents <NAMES>] [-D|--daemon]"
         " [--file <DIR>,<NAME>,<PREFIXES>]"
         " [--memory <PHY>,<LAYOUT>,<NAME>,<PREFIXES>]"
         " [--tcp <IP>,<PORT>,<NAME>,<PREFIXES>]"
@@ -103,6 +103,7 @@ static void help_message(void) {
         "  --prefixes <PREFIXES>         作为子节点时，注册到父节点后支持的prefix列表（默认：*）\n"
         "  --children <NAMES>            子节点列表，主动请求子节点来注册（默认：无）\n"
         "  --parents <NAMES>             父节点列表，主动注册到父节点（默认：无）\n"
+        "  -D, --daemon                  守护进程模式（默认阻塞在前台）\n"
         "\n"
         "  --file <DIR>,<NAME>,<PREFIXES>             注册类型为file的本地IO。DIR是file IO的根目录\n"
         "  --memory <PHY>,<LAYOUT>,<NAME>,<PREFIXES>  注册类型为memory的本地IO。PHY是memory IO需要映射的内存地址，LAYOUT是描述内存布局的json文件\n"
@@ -116,7 +117,7 @@ static void help_message(void) {
 }
 
 void propd_config_parse(propd_config_t *config, int argc, char *argv[]) {
-    const char   *shortopts  = "l:N:C:d:n:c:p:i:a:f:m:t:u:h";
+    const char   *shortopts  = "l:N:C:d:n:c:p:i:a:Df:m:t:u:h";
     struct option longopts[] = {
         // clang-format off
         {"loglevel", required_argument, 0, 'l'},
@@ -128,6 +129,7 @@ void propd_config_parse(propd_config_t *config, int argc, char *argv[]) {
         {"prefixes", required_argument, 0, 'p'},
         {"children", required_argument, 0, 'i'},
         {"parents", required_argument, 0, 'a'},
+        {"daemon", no_argument, 0, 'D'},
         {"file", required_argument, 0, 'f'},
         {"memory", required_argument, 0, 'm'},
         {"tcp", required_argument, 0, 't'},
@@ -187,6 +189,9 @@ void propd_config_parse(propd_config_t *config, int argc, char *argv[]) {
             }
             config->parents = args;
         } break;
+        case 'D':
+            config->daemon = true;
+            break;
         case 'f':
         case 'm':
         case 't':
@@ -312,16 +317,21 @@ error:
     exit(1);
 }
 
-int propd_register(io_t io, const char *name, uint32_t num_prefix, const char *prefix[]) {
-    return route_register(g_route, io, name, num_prefix, prefix);
+int propd_config_register(propd_config_t *config, io_t io, const char *name, uint32_t num_prefix,
+                          const char *prefix[]) {
+    route_item_t *item = route_item_create(io, name, num_prefix, prefix);
+    if (!item) {
+        fprintf(stderr, "fail to create a route item named %s" logFmtErrno "\n", name, logArgErrno);
+        return errno;
+    }
+    LIST_INSERT_HEAD(&config->local_route, item, entry);
+    return 0;
 }
 
 static void nop(int _) { (void)_; }
 
-int propd_run(const propd_config_t *config) {
+static int __propd_run(const propd_config_t *config, int *syncfd) {
     int ret = 0;
-
-    propd_set_logger(config->loglevel, config->logger);
 
     g_at = config->namespace ? config->namespace : "/tmp";
     if (!ret) {
@@ -412,12 +422,22 @@ int propd_run(const propd_config_t *config) {
         }
     }
 
+    if (syncfd && !ret) {
+        int zero = 0;
+        write(*syncfd, &zero, sizeof(zero));
+    }
+
     if (!ret) {
         logfI("propd <%s> is running", name);
         signal(SIGINT, nop);
+        signal(SIGTERM, nop);
         pause();
         logfI("propd <%s> is being cleaned up", name);
         if (getenv("PROPD_ATTACH")) dotwait('.', 2, 10);
+    }
+
+    if (syncfd && ret) {
+        write(*syncfd, &ret, sizeof(ret));
     }
 
     if (ctrl_tid_p) pthread_cancel(*ctrl_tid_p);
@@ -436,5 +456,52 @@ int propd_run(const propd_config_t *config) {
     named_mutex_destroy_namespace(g_nmtx_ns);
     thread_pool_destroy(g_pool);
 
+    if (syncfd && ret) {
+        write(*syncfd, &ret, sizeof(ret));
+    }
+
     return ret;
+}
+
+int propd_run(const propd_config_t *config) {
+    int ret = 0;
+    propd_set_logger(config->loglevel, config->logger);
+
+    if (!config->daemon) return __propd_run(config, NULL);
+
+    int fd[2];
+
+    if (pipe(fd) == -1) {
+        logfE("fail to create pipe" logFmtErrno, logArgErrno);
+        return -1;
+    }
+
+    pid_t pid = fork();
+    if (pid < 0) {
+        logfE("first fork failed" logFmtErrno, logArgErrno);
+        return -1;
+    }
+
+    if (pid > 0) {
+        close(fd[1]);
+        read(fd[0], &ret, sizeof(ret));
+        if (ret) read(fd[0], &ret, sizeof(ret));
+        close(fd[0]);
+        return ret;
+    }
+
+    close(fd[0]);
+    setsid();
+
+    pid = fork();
+    if (pid < 0) {
+        logfE("second fork failed" logFmtErrno, logArgErrno);
+        ret = errno;
+        write(fd[1], &ret, sizeof(ret));
+        write(fd[1], &ret, sizeof(ret));
+        return -1;
+    }
+
+    if (pid > 0) return 0;
+    return __propd_run(config, &fd[1]);
 }

@@ -54,9 +54,9 @@ struct propd_config {
     const char **caches;         /* nothing default */
     const char **prefixes;       /* nothing default */
     uint32_t     num_prefix_max; /* 16 default */
-
     const char **children;
     const char **parents;
+    bool         daemon;
 };
 typedef struct propd_config propd_config_t;
 
