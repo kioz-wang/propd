@@ -1,5 +1,5 @@
 /**
- * @file tcp.c
+ * @file bridge.h
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
@@ -28,28 +28,19 @@
  *  SOFTWARE.
  */
 
-#include "io/bridge.h"
-#include "logger/logger.h"
-#include <errno.h>
+#ifndef __PROPD_BRIDGE_H
+#define __PROPD_BRIDGE_H
 
-#define logFmtHead  "[bridge][tcp] "
-#define logFmtKey   "<%s> "
-#define logFmtValue "\"%s\""
+#include "io.h"
 
-struct priv {
-    /* TODO */;
-};
-typedef struct priv priv_t;
+io_ctx_t *io_constructor_file(const char *name, const char *dir);
+io_ctx_t *io_constructor_unix(const char *name, const char *target);
+io_ctx_t *io_constructor_memory(const char *name, long phy, const void *layout);
+io_ctx_t *io_constructor_tcp(const char *name, const char *ip, unsigned short port);
 
-io_t bridge_tcp(const char *ip, unsigned short port) {
-    io_t io = BRIDGE_INITIALIZER;
-    logfE(logFmtHead "unsupported");
+extern io_parseConfig_t file_parseConfig;
+extern io_parseConfig_t unix_parseConfig;
+extern io_parseConfig_t memory_parseConfig;
+extern io_parseConfig_t tcp_parseConfig;
 
-    priv_t *priv = (priv_t *)malloc(sizeof(priv_t));
-    if (!priv) {
-        logfE(logFmtHead "fail to allocate priv" logFmtErrno, logArgErrno);
-        return io;
-    }
-
-    return io;
-}
+#endif /* __PROPD_BRIDGE_H */

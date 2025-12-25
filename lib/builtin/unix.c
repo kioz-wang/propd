@@ -29,7 +29,7 @@
  */
 
 #include "global.h"
-#include "io/bridge.h"
+#include "builtin.h"
 #include "io_server.h"
 #include "logger/logger.h"
 #include "misc.h"
@@ -221,17 +221,35 @@ static int del(const char *target, const char *key) {
     return ret;
 }
 
-io_t bridge_unix(const char *target) {
-    io_t io = BRIDGE_INITIALIZER;
+io_ctx_t *io_constructor_unix(const char *name, const char *target) {
+    io_ctx_t *ctx = (io_ctx_t *)calloc(1, sizeof(io_ctx_t));
+    if (!ctx) return NULL;
 
-    if (!(io.priv = strdup(target))) {
+    if (!(ctx->name = strdup(name))) {
+        logfE(logFmtHead "fail to allocate name" logFmtErrno, logArgErrno);
+        return NULL;
+    }
+    if (!(ctx->priv = strdup(target))) {
         logfE(logFmtHead "fail to allocate priv" logFmtErrno, logArgErrno);
-        return io;
+        return NULL;
     }
 
-    io.get    = (typeof(io.get))get;
-    io.set    = (typeof(io.set))set;
-    io.del    = (typeof(io.del))del;
-    io.deinit = free;
-    return io;
+    ctx->get        = (typeof(ctx->get))get;
+    ctx->set        = (typeof(ctx->set))set;
+    ctx->del        = (typeof(ctx->del))del;
+    ctx->destructor = free;
+    return ctx;
 }
+
+static io_ctx_t *parse(const char *name, const char **args) {
+    ;
+    return io_constructor_unix(name, args[0]);
+}
+
+io_parseConfig_t unix_parseConfig = {
+    .name    = "unix",
+    .argName = "<NAME>",
+    .note    = "注册类型为unix的本地IO（与通过--children注册不同的是：不需要child具有ctrl server，且不支持“立即缓存”）",
+    .argNum  = 1,
+    .parse   = parse,
+};

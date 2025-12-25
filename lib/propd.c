@@ -29,14 +29,15 @@
  */
 
 #include "propd.h"
+#include "cache.h"
 #include "ctrl_server.h"
 #include "global.h"
-#include "io/bridge.h"
-#include "io/memio/layout.h"
+#include "io.h"
 #include "io_server.h"
 #include "logger/logger.h"
 #include "misc.h"
 #include "named_mutex.h"
+#include "route.h"
 #include "thread_pool.h"
 #include <errno.h>
 #include <fcntl.h>
@@ -56,11 +57,16 @@ void __attribute__((constructor)) __propd_env_parse(void) {
     }
 }
 
-void    *g_credbook = NULL;
-void    *g_pool     = NULL;
-void    *g_nmtx_ns  = NULL;
-cache_t *g_cache    = NULL;
-route_t *g_route    = NULL;
+void *g_credbook = NULL;
+void *g_pool     = NULL;
+void *g_nmtx_ns  = NULL;
+void *g_cache    = NULL;
+void *g_route    = NULL;
+
+int propd_errno_map(void /* errno */) {
+    ;
+    return 0;
+}
 
 void propd_config_default(propd_config_t *config) {
     config->loglevel = MLOG_INFO;
@@ -83,16 +89,34 @@ void propd_config_default(propd_config_t *config) {
     config->children       = NULL;
     config->parents        = NULL;
     config->daemon         = false;
+
+    LIST_INIT(&config->io_parseConfigs);
 }
 
-static void help_message(void) {
+int propd_config_register(propd_config_t *config, io_ctx_t *io_ctx, uint32_t num_prefix, const char *prefix[]) {
+    route_item_t *item = route_item_create(io_ctx, num_prefix, prefix);
+    if (!item) {
+        fprintf(stderr, "fail to create a route item named %s" logFmtErrno "\n", io_ctx->name, logArgErrno);
+        return errno;
+    }
+    LIST_INSERT_HEAD(&config->local_route, item, entry);
+    return 0;
+}
+
+static void help_message(const propd_config_t *config) {
+    io_parseConfig_t *parseConfig;
+    const char       *message;
+
     // clang-format off
-    const char *message =
-        "propd [--loglevel <LOGLEVEL>] [--namespace <DIR>] [--enable-cache <INTERVAL>] [--default-duration <INTERVAL>] [--name <NAME>] [--caches <KEYS>] [--prefixes <PREFIXES>] [--children <NAMES>] [--parents <NAMES>] [-D|--daemon]"
-        " [--file <DIR>,<NAME>,<PREFIXES>]"
-        " [--memory <PHY>,<LAYOUT>,<NAME>,<PREFIXES>]"
-        " [--tcp <IP>,<PORT>,<NAME>,<PREFIXES>]"
-        " [--unix <NAME>,<PREFIXES>]\n"
+    fputs("propd [--loglevel <LOGLEVEL>] [--namespace <DIR>] [--enable-cache <INTERVAL>] [--default-duration <INTERVAL>] [--name <NAME>] [--caches <KEYS>] [--prefixes <PREFIXES>] [--children <NAMES>] [--parents <NAMES>] [-D|--daemon]\n", stderr);
+    // clang-format on
+
+    LIST_FOREACH(parseConfig, &config->io_parseConfigs, entry) {
+        fprintf(stderr, " [--%s %s,<NAME>,<PREFIXES>]\n", parseConfig->name, parseConfig->argName);
+    }
+
+    // clang-format off
+    message =
         "\n"
         "  --loglevel <LOGLEVEL>         指定日志等级（取值（大小写不敏感）：ERRO|WARN|INFO|VERB|DEBG；默认：INFO）\n"
         "  --namespace <DIR>             指定Unix域套接字的根路径（默认：/tmp）\n"
@@ -103,12 +127,20 @@ static void help_message(void) {
         "  --prefixes <PREFIXES>         作为子节点时，注册到父节点后支持的prefix列表（默认：*）\n"
         "  --children <NAMES>            子节点列表，主动请求子节点来注册（默认：无）\n"
         "  --parents <NAMES>             父节点列表，主动注册到父节点（默认：无）\n"
-        "  -D, --daemon                  守护进程模式（默认阻塞在前台）\n"
-        "\n"
-        "  --file <DIR>,<NAME>,<PREFIXES>             注册类型为file的本地IO。DIR是file IO的根目录\n"
-        "  --memory <PHY>,<LAYOUT>,<NAME>,<PREFIXES>  注册类型为memory的本地IO。PHY是memory IO需要映射的内存地址，LAYOUT是描述内存布局的json文件\n"
-        "  --tcp <IP>,<PORT>,<NAME>,<PREFIXES>        注册类型为tcp的本地IO。IP，PORT是tcp IO需要连接的目标\n"
-        "  --unix <NAME>,<PREFIXES>                   注册类型为unix的本地IO（与通过--children注册不同的是：不需要child具有ctrl server，且不支持“立即缓存”）\n"
+        "  -D, --daemon                  守护进程模式（默认阻塞在前台）\n";
+    // clang-format on
+    fputs(message, stderr);
+
+    if (!LIST_EMPTY(&config->io_parseConfigs)) {
+        fputc('\n', stderr);
+    }
+    LIST_FOREACH(parseConfig, &config->io_parseConfigs, entry) {
+        fprintf(stderr, "  --%s %s,<NAME>,<PREFIXES>\t %s\n", parseConfig->name, parseConfig->argName,
+                parseConfig->note);
+    }
+
+    // clang-format off
+    message =
         "\n"
         "多个prefix之间使用逗号隔开；多个name之间使用逗号隔开；PREFIXES是支持的prefix列表\n"
         "\n";
@@ -116,34 +148,63 @@ static void help_message(void) {
     fputs(message, stderr);
 }
 
-void propd_config_parse(propd_config_t *config, int argc, char *argv[]) {
-    const char   *shortopts  = "l:N:C:d:n:c:p:i:a:Df:m:t:u:h";
-    struct option longopts[] = {
-        // clang-format off
-        {"loglevel", required_argument, 0, 'l'},
-        {"namespace", required_argument, 0, 'N'},
-        {"enable-cache", required_argument, 0, 'C'},
-        {"default-duration", required_argument, 0, 'd'},
-        {"name", required_argument, 0, 'n'},
-        {"caches", required_argument, 0, 'c'},
-        {"prefixes", required_argument, 0, 'p'},
-        {"children", required_argument, 0, 'i'},
-        {"parents", required_argument, 0, 'a'},
-        {"daemon", no_argument, 0, 'D'},
-        {"file", required_argument, 0, 'f'},
-        {"memory", required_argument, 0, 'm'},
-        {"tcp", required_argument, 0, 't'},
-        {"unix", required_argument, 0, 'u'},
-        {0, 0, 0, 0},
-        // clang-format on
-    };
-    int opt;
-    int option_index = 0;
+static const struct option g_longopts[] = {
+    // clang-format off
+    {"loglevel", required_argument, 0, 'l'},
+    {"namespace", required_argument, 0, 'N'},
+    {"enable-cache", required_argument, 0, 'C'},
+    {"default-duration", required_argument, 0, 'd'},
+    {"name", required_argument, 0, 'n'},
+    {"caches", required_argument, 0, 'c'},
+    {"prefixes", required_argument, 0, 'p'},
+    {"children", required_argument, 0, 'i'},
+    {"parents", required_argument, 0, 'a'},
+    {"daemon", no_argument, 0, 'D'},
+    {0, 0, 0, 0},
+    // clang-format on
+};
 
+void propd_config_apply_parser(propd_config_t *config, io_parseConfig_t *parseConfig) {
+    LIST_INSERT_HEAD(&config->io_parseConfigs, parseConfig, entry);
+}
+
+void propd_config_parse(propd_config_t *config, int argc, char *argv[]) {
+    const char       *shortopts   = "hvN:n:D";
+    struct option    *longopts    = NULL;
+    int               num_longopt = 0;
+    io_parseConfig_t *parseConfig;
+    int               num_parseConfig = 0;
+
+    for (int i = 0; g_longopts[i].name; i++) {
+        num_longopt++;
+    }
+    LIST_FOREACH(parseConfig, &config->io_parseConfigs, entry) { num_parseConfig++; }
+    longopts = (struct option *)calloc(num_longopt + num_parseConfig + 1, sizeof(struct option));
+    if (!longopts) {
+        fprintf(stderr, "fail to allocate memeory to parse" logFmtErrno "\n", logArgErrno);
+        exit(EXIT_FAILURE);
+    }
+
+    for (int i = 0; i < num_longopt; i++) {
+        longopts[i] = g_longopts[i];
+    }
+    int opt = 0;
+    LIST_FOREACH(parseConfig, &config->io_parseConfigs, entry) {
+        longopts[num_longopt + opt].name    = parseConfig->name;
+        longopts[num_longopt + opt].has_arg = required_argument;
+        longopts[num_longopt + opt].flag    = 0;
+        longopts[num_longopt + opt].val     = opt;
+        opt++;
+    }
+
+    int option_index = 0;
     while ((opt = getopt_long(argc, argv, shortopts, longopts, &option_index)) != -1) {
         switch (opt) {
         case 'l':
             config->loglevel = mlog_level_parse(optarg);
+            break;
+        case 'v':
+            config->loglevel = MLOG_VERB;
             break;
         case 'N':
             config->namespace = optarg;
@@ -192,106 +253,44 @@ void propd_config_parse(propd_config_t *config, int argc, char *argv[]) {
         case 'D':
             config->daemon = true;
             break;
-        case 'f':
-        case 'm':
-        case 't':
-        case 'u': {
-            size_t       length;
+        case 'h':
+            help_message(config);
+            exit(0);
+            break;
+        case '?':
+            exit(1);
+        default: {
+            int i = 0;
+            LIST_FOREACH(parseConfig, &config->io_parseConfigs, entry) {
+                if (i == opt) break;
+            }
+            int          length;
             const char **args = arrayparse_cstring(optarg, &length);
             if (!args) {
                 fprintf(stderr, "fail to parse cstring's array seperated by comma" logFmtErrno "\n", logArgErrno);
                 goto error;
             }
-            const char  *name     = NULL;
-            const char **prefixes = NULL;
-            io_t         io;
-
-            switch (opt) {
-            case 'f': {
-                if (length < 3) {
-                    fprintf(stderr, "require more arguments, see: --file <DIR>,<NAME>,<PREFIXES>\n");
-                    goto error;
-                }
-                name     = args[1];
-                prefixes = &args[2];
-
-                io = bridge_file(args[0]);
-                if (bridge_is_bad(&io)) {
-                    fprintf(stderr, "fail to bridge file %s\n", args[0]);
-                    goto error;
-                }
-            } break;
-            case 'm': {
-                if (length < 4) {
-                    fprintf(stderr, "require more arguments, see: --memory <PHY>,<LAYOUT>,<NAME>,<PREFIXES>\n");
-                    goto error;
-                }
-                name     = args[2];
-                prefixes = &args[3];
-
-                long   phy    = strtoul(args[0], NULL, 16);
-                pos_t *layout = layout_parse(args[1]);
-                if (!layout) {
-                    goto error;
-                }
-
-                io = bridge_memory(phy, layout);
-                if (bridge_is_bad(&io)) {
-                    fprintf(stderr, "fail to bridge memory %s,%s\n", args[0], args[1]);
-                    goto error;
-                }
-            } break;
-            case 't': {
-                if (length < 4) {
-                    fprintf(stderr, "require more arguments, see: --tcp <IP>,<PORT>,<NAME>,<PREFIXES>\n");
-                    goto error;
-                }
-                name     = args[2];
-                prefixes = &args[3];
-
-                unsigned short port = strtoul(args[1], NULL, 0);
-
-                io = bridge_tcp(args[0], port);
-                if (bridge_is_bad(&io)) {
-                    fprintf(stderr, "fail to bridge tcp %s,%s\n", args[0], args[1]);
-                    goto error;
-                }
-            } break;
-            case 'u': {
-                if (length < 2) {
-                    fprintf(stderr, "require more arguments, see: --unix <NAME>,<PREFIXES>\n");
-                    goto error;
-                }
-                name     = args[0];
-                prefixes = &args[1];
-
-                io = bridge_unix(args[0]);
-                if (bridge_is_bad(&io)) {
-                    fprintf(stderr, "fail to bridge unix %s\n", args[0]);
-                    goto error;
-                }
-            } break;
+            if (length < parseConfig->argNum + 2) {
+                fprintf(stderr, "require more arguments, see: --%s %s,<NAME>,<PREFIXES>\n", parseConfig->name,
+                        parseConfig->argName);
+                goto error;
             }
-
-            route_item_t *item = route_item_create(io, name, 0, prefixes);
+            const char  *name     = args[parseConfig->argNum];
+            const char **prefixes = &args[parseConfig->argNum + 1];
+            io_ctx_t    *io_ctx   = parseConfig->parse(name, args);
+            if (!io_ctx) {
+                fprintf(stderr, "fail to create a route item named %s" logFmtErrno "\n", name, logArgErrno);
+                goto error;
+            }
+            route_item_t *item = route_item_create(io_ctx, 0, prefixes);
             if (!item) {
                 fprintf(stderr, "fail to create a route item named %s" logFmtErrno "\n", name, logArgErrno);
-                io_deinit(&io);
+                io_destructor(io_ctx);
                 goto error;
             }
             LIST_INSERT_HEAD(&config->local_route, item, entry);
             arrayfree_cstring(args);
         } break;
-        case 'h':
-            help_message();
-            exit(0);
-            break;
-        case '?':
-            fprintf(stderr, "unknown option\n"); /* TODO show option */
-            exit(1);
-        default:
-            fprintf(stderr, "unknown error\n");
-            exit(1);
         }
     }
 
@@ -315,17 +314,6 @@ error:
         route_item_destroy(item);
     }
     exit(1);
-}
-
-int propd_config_register(propd_config_t *config, io_t io, const char *name, uint32_t num_prefix,
-                          const char *prefix[]) {
-    route_item_t *item = route_item_create(io, name, num_prefix, prefix);
-    if (!item) {
-        fprintf(stderr, "fail to create a route item named %s" logFmtErrno "\n", name, logArgErrno);
-        return errno;
-    }
-    LIST_INSERT_HEAD(&config->local_route, item, entry);
-    return 0;
 }
 
 static void nop(int _) { (void)_; }
@@ -377,9 +365,9 @@ static int __propd_run(const propd_config_t *config, int *syncfd) {
     }
 
     if (!ret) {
-        g_route->list.lh_first = config->local_route.lh_first;
+        ((route_t *)g_route)->list.lh_first = config->local_route.lh_first;
         if (config->local_route.lh_first) {
-            config->local_route.lh_first->entry.le_prev = &g_route->list.lh_first;
+            config->local_route.lh_first->entry.le_prev = &((route_t *)g_route)->list.lh_first;
             // config->local_route.lh_first = NULL;
         }
     }

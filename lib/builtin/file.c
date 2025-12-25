@@ -28,7 +28,7 @@
  *  SOFTWARE.
  */
 
-#include "io/bridge.h"
+#include "builtin.h"
 #include "logger/logger.h"
 #include <errno.h>
 #include <linux/limits.h>
@@ -117,25 +117,43 @@ static int file_del(const char *root, const char *key) {
     return ret;
 }
 
-io_t bridge_file(const char *dir) {
-    io_t io = BRIDGE_INITIALIZER;
+io_ctx_t *io_constructor_file(const char *name, const char *dir) {
+    io_ctx_t *ctx = (io_ctx_t *)calloc(1, sizeof(io_ctx_t));
+    if (!ctx) return NULL;
 
     if (access(dir, F_OK) == -1) {
         int ret = mkdir(dir, 0755);
         if (ret) {
             logfE(logFmtHead "fail to create root path %s" logFmtErrno, dir, logArgErrno);
-            return io;
+            return NULL;
         }
     }
 
-    if (!(io.priv = strdup(dir))) {
+    if (!(ctx->name = strdup(name))) {
+        logfE(logFmtHead "fail to allocate name" logFmtErrno, logArgErrno);
+        return NULL;
+    }
+    if (!(ctx->priv = strdup(dir))) {
         logfE(logFmtHead "fail to allocate priv" logFmtErrno, logArgErrno);
-        return io;
+        return NULL;
     }
 
-    io.get    = (typeof(io.get))file_get;
-    io.set    = (typeof(io.set))file_set;
-    io.del    = (typeof(io.del))file_del;
-    io.deinit = free;
-    return io;
+    ctx->get        = (typeof(ctx->get))file_get;
+    ctx->set        = (typeof(ctx->set))file_set;
+    ctx->del        = (typeof(ctx->del))file_del;
+    ctx->destructor = free;
+    return ctx;
 }
+
+static io_ctx_t *parse(const char *name, const char **args) {
+    ;
+    return io_constructor_file(name, args[0]);
+}
+
+io_parseConfig_t file_parseConfig = {
+    .name    = "file",
+    .argName = "<DIR>",
+    .note    = "注册类型为file的本地IO。DIR是file IO的根目录",
+    .argNum  = 1,
+    .parse   = parse,
+};

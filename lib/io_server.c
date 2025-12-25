@@ -30,9 +30,12 @@
 
 #define _GNU_SOURCE
 #include "io_server.h"
+#include "cache.h"
 #include "global.h"
+#include "io.h"
 #include "logger/logger.h"
 #include "named_mutex.h"
+#include "route.h"
 #include "thread_pool.h"
 #include "value.h"
 #include <errno.h>
@@ -57,8 +60,8 @@ static int cred_check(void *credbook, const struct ucred *cred, io_type_t type, 
 }
 
 static int local_get(const char *key, const value_t **value, timestamp_t *duration) {
-    int  ret = 0;
-    io_t io;
+    int      ret = 0;
+    io_ctx_t io;
 
     if (g_cache) {
         ret = cache_get(g_cache, key, value, duration);
@@ -83,8 +86,8 @@ static int local_get(const char *key, const value_t **value, timestamp_t *durati
 }
 
 static int local_set(const char *key, const value_t *value) {
-    int  ret = 0;
-    io_t io;
+    int      ret = 0;
+    io_ctx_t io;
 
     ret = route_match(g_route, key, &io);
     if (ret) return ret;
@@ -104,8 +107,8 @@ static int local_set(const char *key, const value_t *value) {
 }
 
 static int local_del(const char *key) {
-    int  ret = 0;
-    io_t io;
+    int      ret = 0;
+    io_ctx_t io;
 
     ret = route_match(g_route, key, &io);
     if (ret) return ret;

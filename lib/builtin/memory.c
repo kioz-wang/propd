@@ -29,8 +29,8 @@
  */
 
 #include "cache.h"
-#include "io/bridge.h"
-#include "io/memio/layout.h"
+#include "builtin.h"
+#include "memio/layout.h"
 #include "logger/logger.h"
 #include <errno.h>
 #include <fcntl.h>
@@ -76,34 +76,55 @@ static int memory_get(const priv_t *priv, const char *key, const value_t **value
     return 0;
 }
 
-io_t bridge_memory(long phy, const pos_t *layout) {
-    io_t io = BRIDGE_INITIALIZER;
+io_ctx_t *io_constructor_memory(const char *name, long phy, const void *layout) {
+    io_ctx_t *ctx = (io_ctx_t *)calloc(1, sizeof(io_ctx_t));
+    if (!ctx) return NULL;
+
+    if (!(ctx->name = strdup(name))) {
+        logfE(logFmtHead "fail to allocate name" logFmtErrno, logArgErrno);
+        return NULL;
+    }
 
     int fd = open("/dev/mem", O_RDWR | O_SYNC);
     if (fd == -1) {
         logfE(logFmtHead "fail to open /dev/mem" logFmtErrno, logArgErrno);
-        return io;
+        return NULL;
     }
     uint32_t len  = layout_length(layout);
     void    *base = mmap(0, len, PROT_READ, MAP_SHARED, fd, phy);
     close(fd);
     if (!base) {
         logfE(logFmtHead "fail to mmap(%lx,%x)" logFmtErrno, phy, len, logArgErrno);
-        return io;
+        return NULL;
     }
 
     priv_t *priv = (priv_t *)malloc(sizeof(priv_t));
     if (!priv) {
         logfE(logFmtHead "fail to allocate priv" logFmtErrno, logArgErrno);
-        return io;
+        return NULL;
     }
     priv->base   = base;
     priv->layout = layout;
 
-    io.priv   = priv;
-    io.get    = (typeof(io.get))memory_get;
-    io.set    = NULL;
-    io.del    = NULL;
-    io.deinit = (typeof(io.deinit))memory_deinit;
-    return io;
+    ctx->priv       = priv;
+    ctx->get        = (typeof(ctx->get))memory_get;
+    ctx->destructor = (typeof(ctx->destructor))memory_deinit;
+    return ctx;
 }
+
+static io_ctx_t *parse(const char *name, const char **args) {
+    long   phy    = strtoul(args[0], NULL, 16);
+    pos_t *layout = layout_parse(args[1]);
+    if (!layout) {
+        return NULL;
+    }
+    return io_constructor_memory(name, phy, layout);
+}
+
+io_parseConfig_t memory_parseConfig = {
+    .name    = "memory",
+    .argName = "<PHY>,<LAYOUT>",
+    .note    = "注册类型为memory的本地IO。PHY是memory IO需要映射的内存地址，LAYOUT是描述内存布局的json文件",
+    .argNum  = 2,
+    .parse   = parse,
+};

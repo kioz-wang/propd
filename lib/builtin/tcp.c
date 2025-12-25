@@ -1,5 +1,5 @@
 /**
- * @file bridge.h
+ * @file tcp.c
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
@@ -28,18 +28,48 @@
  *  SOFTWARE.
  */
 
-#ifndef __PROPD_BRIDGE_H
-#define __PROPD_BRIDGE_H
+#include "builtin.h"
+#include "logger/logger.h"
+#include <errno.h>
 
-#include "io/io.h"
-#include "io/memio/position.h"
+#define logFmtHead  "[bridge][tcp] "
+#define logFmtKey   "<%s> "
+#define logFmtValue "\"%s\""
 
-#define BRIDGE_INITIALIZER {.priv = NULL, .get = NULL, .set = NULL, .del = NULL, .deinit = NULL}
-static inline bool bridge_is_bad(const io_t *io) { return !io->get && !io->set && !io->del; }
+struct priv {
+    /* TODO */;
+};
+typedef struct priv priv_t;
 
-io_t bridge_file(const char *dir);
-io_t bridge_memory(long phy, const pos_t *layout);
-io_t bridge_tcp(const char *ip, unsigned short port);
-io_t bridge_unix(const char *target);
+io_ctx_t *io_constructor_tcp(const char *name, const char *ip, unsigned short port) {
+    io_ctx_t *ctx = (io_ctx_t *)calloc(1, sizeof(io_ctx_t));
+    if (!ctx) return NULL;
 
-#endif /* __PROPD_BRIDGE_H */
+    if (!(ctx->name = strdup(name))) {
+        logfE(logFmtHead "fail to allocate name" logFmtErrno, logArgErrno);
+        return NULL;
+    }
+
+    priv_t *priv = (priv_t *)malloc(sizeof(priv_t));
+    if (!priv) {
+        logfE(logFmtHead "fail to allocate priv" logFmtErrno, logArgErrno);
+        return NULL;
+    }
+
+    ctx->priv       = priv;
+    ctx->destructor = free;
+    return ctx;
+}
+
+static io_ctx_t *parse(const char *name, const char **args) {
+    unsigned short port = strtoul(args[1], NULL, 0);
+    return io_constructor_tcp(name, args[0], port);
+}
+
+io_parseConfig_t tcp_parseConfig = {
+    .name    = "tcp",
+    .argName = "<IP>,<PORT>",
+    .note    = "注册类型为tcp的本地IO。IP，PORT是tcp IO需要连接的目标",
+    .argNum  = 2,
+    .parse   = parse,
+};

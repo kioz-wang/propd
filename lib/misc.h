@@ -43,7 +43,7 @@ void random_alphabet(char *addr, size_t length, bool upper);
  * @param length 当array为NULL时无意义；否则若为0，预期array以NULL终止并以此确定length值
  * @return const char**
  */
-const char **arraydup_cstring(const char **array, size_t length);
+const char **arraydup_cstring(const char **array, int length);
 /**
  * @brief Release a cstring's array that terminated with NULL
  *
@@ -57,7 +57,7 @@ void arrayfree_cstring(const char **array);
  * @param length 返回解析出的字符串数量（可以传入NULL）
  * @return const char**
  */
-const char **arrayparse_cstring(const char *s, size_t *length);
+const char **arrayparse_cstring(const char *s, int *length);
 
 /**
  * @brief Hexdump memory into buffer (use '.' to replace middle that too long to dump)

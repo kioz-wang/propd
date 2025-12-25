@@ -57,12 +57,17 @@ struct propd_config {
     const char **children;
     const char **parents;
     bool         daemon;
+
+    LIST_HEAD(, io_parseConfig) io_parseConfigs;
 };
 typedef struct propd_config propd_config_t;
 
 void propd_config_default(propd_config_t *config);
+int  propd_config_register(propd_config_t *config, io_ctx_t *io_ctx, uint32_t num_prefix, const char *prefix[]);
+
+void propd_config_apply_parser(propd_config_t *config, io_parseConfig_t *parseConfig);
 void propd_config_parse(propd_config_t *config, int argc, char *argv[]);
-int propd_config_register(propd_config_t *config, io_t io, const char *name, uint32_t num_prefix, const char *prefix[]);
+
 int propd_run(const propd_config_t *config);
 
 #endif /* __PROPD_H */

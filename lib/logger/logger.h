@@ -122,6 +122,8 @@ static inline int64_t mlog_timestamp(bool monotonic) {
 #define logfD(fmt, ...)                                                                                                \
     MLOGGER_FUNC(logf)(MLOG_DEBG, MLOG_tsFmt MLOG_cDEBG MLOG_lDEBG fmt MLOG_cRESET "\n" MLOG_tsArg, ##__VA_ARGS__)
 
+#include <errno.h>
+#include <string.h>
 #define logFmtRet   " (%d)"
 #define logFmtErrno " (%d:%s)"
 #define logArgErrno errno, strerror(errno)

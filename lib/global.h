@@ -31,19 +31,30 @@
 #ifndef __PROPD_GLOBAL_H
 #define __PROPD_GLOBAL_H
 
-#include "cache.h"
-#include "route.h"
-
 extern const char *g_at;
 extern void       *g_credbook;
 extern void       *g_pool;
 extern void       *g_nmtx_ns;
-extern cache_t    *g_cache;
-extern route_t    *g_route;
+extern void       *g_cache;
+extern void       *g_route;
 
 #define PathFmt_CtrlServer "%s/propd.%s.ctrl"
 #define PathFmt_IOServer   "%s/propd.%s.io"
 #define PathFmt_CtrlClient "%s/prop.%s.ctrl"
 #define PathFmt_IOClient   "%s/prop.%s.io"
+
+enum propd_errno {
+    PROPD_E_SUCCESS = 0,
+    RPOPD_E_OPNOTSUPP,
+    PROPD_E_NOENT,
+    PROPD_E_NOMEM,
+    PROPD_E_NOBUFS,
+    PROPD_E_IO,
+    PROPD_E_MISC,
+    /* compile-time error */
+    PROPD_E_UNREACHABLE,
+};
+
+int propd_errno_map(void /* errno */);
 
 #endif /* __PROPD_GLOBAL_H */

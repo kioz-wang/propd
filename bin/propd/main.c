@@ -28,12 +28,15 @@
  *  SOFTWARE.
  */
 
+#include "builtin/builtin.h"
 #include "propd.h"
 
 int main(int argc, char *argv[]) {
     propd_config_t config;
 
     propd_config_default(&config);
+
+    propd_config_apply_parser(&config, &file_parseConfig);
 
     propd_config_parse(&config, argc, argv);
 

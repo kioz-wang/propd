@@ -31,14 +31,13 @@
 #ifndef __PROPD_ROUTE_H
 #define __PROPD_ROUTE_H
 
-#include "io/io.h"
+#include "io.h"
 #include <pthread.h>
 #include <stdint.h>
 #include <sys/queue.h>
 
 struct route_item {
-    io_t         io;
-    const char  *name;
+    io_ctx_t    *io_ctx;
     const char **prefix;
     LIST_ENTRY(route_item) entry;
 };
@@ -47,13 +46,12 @@ typedef struct route_item route_item_t;
 /**
  * @brief Allocate and initialize an item of route
  *
- * @param io
- * @param name
+ * @param io_ctx
  * @param num_prefix ref. length of arraydup_cstring
  * @param prefix ref. array of arraydup_cstring
  * @return route_item_t*
  */
-route_item_t *route_item_create(io_t io, const char *name, uint32_t num_prefix, const char *prefix[]);
+route_item_t *route_item_create(io_ctx_t *io_ctx, uint32_t num_prefix, const char *prefix[]);
 /**
  * @brief Release an item of route
  *
@@ -84,13 +82,12 @@ void route_destroy(route_t *route);
  * @brief Register a route item
  *
  * @param route 路由表对象
- * @param io
- * @param name
+ * @param io_ctx
  * @param num_prefix ref. length of arraydup_cstring
  * @param prefix ref. array of arraydup_cstring
  * @return int ENOMEM EEXIST
  */
-int route_register(route_t *route, io_t io, const char *name, uint32_t num_prefix, const char *prefix[]);
+int route_register(route_t *route, io_ctx_t *io_ctx, uint32_t num_prefix, const char *prefix[]);
 /**
  * @brief Unregister a route item by name
  *
@@ -104,9 +101,9 @@ int route_unregister(route_t *route, const char *name);
  *
  * @param route 路由表对象
  * @param key
- * @param io
+ * @param io_ctx
  * @return int ENOENT
  */
-int route_match(route_t *route, const char *key, io_t *io);
+int route_match(route_t *route, const char *key, io_ctx_t *io_ctx);
 
 #endif /* __PROPD_ROUTE_H */

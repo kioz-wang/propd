@@ -45,7 +45,7 @@ void random_alphabet(char *addr, size_t length, bool upper) {
     }
 }
 
-const char **arraydup_cstring(const char **array, size_t length) {
+const char **arraydup_cstring(const char **array, int length) {
     if (array) {
         if (!length)
             while (array[length])
@@ -55,7 +55,7 @@ const char **arraydup_cstring(const char **array, size_t length) {
     }
     const char **dup = (const char **)calloc(length + 1, sizeof(char *));
     if (!dup) return NULL;
-    for (size_t i = 0; i < length; i++) {
+    for (int i = 0; i < length; i++) {
         dup[i] = strdup(array[i]);
         if (!dup[i]) {
             arrayfree_cstring(dup);
@@ -74,13 +74,13 @@ void arrayfree_cstring(const char **array) {
     }
 }
 
-const char **arrayparse_cstring(const char *s, size_t *_length) {
+const char **arrayparse_cstring(const char *s, int *_length) {
     char *_s = strdup(s);
     if (!_s) return NULL;
 
-    size_t length = 0;
-    char  *w1     = _s;
-    char  *w2     = _s;
+    int   length = 0;
+    char *w1     = _s;
+    char *w2     = _s;
 
     while (*w2) {
         if (*w2 == ',') {

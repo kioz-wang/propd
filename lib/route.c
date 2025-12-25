@@ -37,11 +37,10 @@
 #include <string.h>
 #include <unistd.h>
 
-route_item_t *route_item_create(io_t io, const char *name, uint32_t num_prefix, const char *prefix[]) {
+route_item_t *route_item_create(io_ctx_t *io_ctx, uint32_t num_prefix, const char *prefix[]) {
     route_item_t *item = (route_item_t *)malloc(sizeof(route_item_t));
     if (!item) goto exit;
-    item->io = io;
-    if (!(item->name = strdup(name))) goto exit;
+    item->io_ctx = io_ctx;
     if (!(item->prefix = arraydup_cstring(prefix, num_prefix))) goto exit;
     return item;
 exit:
@@ -51,9 +50,8 @@ exit:
 
 void route_item_destroy(route_item_t *item) {
     if (item) {
-        free((void *)item->name);
         arrayfree_cstring(item->prefix);
-        io_deinit(&item->io);
+        io_destructor(item->io_ctx);
         free(item);
     }
 }
@@ -87,10 +85,10 @@ void route_destroy(route_t *route) {
     logfI("[route] destroyed");
 }
 
-int route_register(route_t *route, io_t io, const char *name, uint32_t num_prefix, const char *prefix[]) {
-    route_item_t *item = route_item_create(io, name, num_prefix, prefix);
+int route_register(route_t *route, io_ctx_t *io_ctx, uint32_t num_prefix, const char *prefix[]) {
+    route_item_t *item = route_item_create(io_ctx, num_prefix, prefix);
     if (!item) {
-        logfE("[route] <%s> fail to allocate item" logFmtErrno, name, logArgErrno);
+        logfE("[route] <%s> fail to allocate item" logFmtErrno, io_ctx->name, logArgErrno);
         return ENOMEM;
     }
     int ret = 0;
@@ -99,8 +97,8 @@ int route_register(route_t *route, io_t io, const char *name, uint32_t num_prefi
 
     route_item_t *temp = NULL;
     LIST_FOREACH(temp, &route->list, entry) {
-        if (!strcmp(temp->name, name)) {
-            logfE("[route] <%s> item name occupied", name);
+        if (!strcmp(temp->io_ctx->name, io_ctx->name)) {
+            logfE("[route] <%s> item name occupied", io_ctx->name);
             ret = EEXIST;
             goto exit;
         }
@@ -108,7 +106,7 @@ int route_register(route_t *route, io_t io, const char *name, uint32_t num_prefi
 
     LIST_INSERT_HEAD(&route->list, item, entry);
 
-    logfI("[route] <%s> register item", name);
+    logfI("[route] <%s> register item", io_ctx->name);
 
 exit:
     pthread_rwlock_unlock(&route->rwlock);
@@ -124,7 +122,7 @@ int route_unregister(route_t *route, const char *name) {
 
     if (name) {
         LIST_FOREACH(item, &route->list, entry) {
-            if (!strcmp(item->name, name)) {
+            if (!strcmp(item->io_ctx->name, name)) {
                 break;
             }
         }
@@ -143,7 +141,7 @@ int route_unregister(route_t *route, const char *name) {
     }
     LIST_REMOVE(item, entry);
 
-    logfI("[route] <%s> unregister %sitem", item->name, name ? "" : "first ");
+    logfI("[route] <%s> unregister %sitem", item->io_ctx->name, name ? "" : "first ");
 
 exit:
     pthread_rwlock_unlock(&route->rwlock);
@@ -151,7 +149,7 @@ exit:
     return ret;
 }
 
-int route_match(route_t *route, const char *key, io_t *io) {
+int route_match(route_t *route, const char *key, io_ctx_t *io_ctx) {
     route_item_t *item = NULL;
     int           ret  = 0;
 
@@ -160,8 +158,8 @@ int route_match(route_t *route, const char *key, io_t *io) {
     LIST_FOREACH(item, &route->list, entry) {
         for (int i = 0; item->prefix[i]; i++) {
             if (prefix_match(item->prefix[i], key)) {
-                logfV("[route] <%s> match <%s> using %s", item->name, key, item->prefix[i]);
-                if (io) *io = item->io;
+                logfV("[route] <%s> match <%s> using %s", item->io_ctx->name, key, item->prefix[i]);
+                if (io_ctx) *io_ctx = *item->io_ctx;
                 goto exit;
             }
         }
