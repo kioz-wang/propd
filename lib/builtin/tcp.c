@@ -41,8 +41,8 @@ struct priv {
 };
 typedef struct priv priv_t;
 
-io_ctx_t *io_constructor_tcp(const char *name, const char *ip, unsigned short port) {
-    io_ctx_t *ctx = (io_ctx_t *)calloc(1, sizeof(io_ctx_t));
+storage_ctx_t *io_constructor_tcp(const char *name, const char *ip, unsigned short port) {
+    storage_ctx_t *ctx = (storage_ctx_t *)calloc(1, sizeof(storage_ctx_t));
     if (!ctx) return NULL;
 
     if (!(ctx->name = strdup(name))) {
@@ -61,12 +61,12 @@ io_ctx_t *io_constructor_tcp(const char *name, const char *ip, unsigned short po
     return ctx;
 }
 
-static io_ctx_t *parse(const char *name, const char **args) {
+static storage_ctx_t *parse(const char *name, const char **args) {
     unsigned short port = strtoul(args[1], NULL, 0);
     return io_constructor_tcp(name, args[0], port);
 }
 
-io_parseConfig_t tcp_parseConfig = {
+storage_parseConfig_t tcp_parseConfig = {
     .name    = "tcp",
     .argName = "<IP>,<PORT>",
     .note    = "注册类型为tcp的本地IO。IP，PORT是tcp IO需要连接的目标",

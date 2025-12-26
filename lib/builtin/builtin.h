@@ -31,16 +31,16 @@
 #ifndef __PROPD_BRIDGE_H
 #define __PROPD_BRIDGE_H
 
-#include "io.h"
+#include "storage.h"
 
-io_ctx_t *io_constructor_file(const char *name, const char *dir);
-io_ctx_t *io_constructor_unix(const char *name, const char *target);
-io_ctx_t *io_constructor_memory(const char *name, long phy, const void *layout);
-io_ctx_t *io_constructor_tcp(const char *name, const char *ip, unsigned short port);
+storage_ctx_t *io_constructor_file(const char *name, const char *dir);
+storage_ctx_t *io_constructor_unix(const char *name, const char *target);
+storage_ctx_t *io_constructor_memory(const char *name, long phy, const void *layout);
+storage_ctx_t *io_constructor_tcp(const char *name, const char *ip, unsigned short port);
 
-extern io_parseConfig_t file_parseConfig;
-extern io_parseConfig_t unix_parseConfig;
-extern io_parseConfig_t memory_parseConfig;
-extern io_parseConfig_t tcp_parseConfig;
+extern storage_parseConfig_t file_parseConfig;
+extern storage_parseConfig_t unix_parseConfig;
+extern storage_parseConfig_t memory_parseConfig;
+extern storage_parseConfig_t tcp_parseConfig;
 
 #endif /* __PROPD_BRIDGE_H */

@@ -76,8 +76,8 @@ static int memory_get(const priv_t *priv, const char *key, const value_t **value
     return 0;
 }
 
-io_ctx_t *io_constructor_memory(const char *name, long phy, const void *layout) {
-    io_ctx_t *ctx = (io_ctx_t *)calloc(1, sizeof(io_ctx_t));
+storage_ctx_t *io_constructor_memory(const char *name, long phy, const void *layout) {
+    storage_ctx_t *ctx = (storage_ctx_t *)calloc(1, sizeof(storage_ctx_t));
     if (!ctx) return NULL;
 
     if (!(ctx->name = strdup(name))) {
@@ -112,7 +112,7 @@ io_ctx_t *io_constructor_memory(const char *name, long phy, const void *layout) 
     return ctx;
 }
 
-static io_ctx_t *parse(const char *name, const char **args) {
+static storage_ctx_t *parse(const char *name, const char **args) {
     long   phy    = strtoul(args[0], NULL, 16);
     pos_t *layout = layout_parse(args[1]);
     if (!layout) {
@@ -121,7 +121,7 @@ static io_ctx_t *parse(const char *name, const char **args) {
     return io_constructor_memory(name, phy, layout);
 }
 
-io_parseConfig_t memory_parseConfig = {
+storage_parseConfig_t memory_parseConfig = {
     .name    = "memory",
     .argName = "<PHY>,<LAYOUT>",
     .note    = "注册类型为memory的本地IO。PHY是memory IO需要映射的内存地址，LAYOUT是描述内存布局的json文件",

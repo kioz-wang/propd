@@ -34,7 +34,7 @@
 #include <stdbool.h>
 #include <sys/types.h>
 
-void random_alphabet(char *addr, size_t length, bool upper);
+void random_alnum(char *addr, size_t length);
 
 /**
  * @brief Duplicate a cstring's array that maybe terminated with NULL

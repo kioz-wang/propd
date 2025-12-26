@@ -32,10 +32,10 @@
 #include "io_server.h"
 #include "cache.h"
 #include "global.h"
-#include "io.h"
 #include "logger/logger.h"
 #include "named_mutex.h"
 #include "route.h"
+#include "storage.h"
 #include "thread_pool.h"
 #include "value.h"
 #include <errno.h>
@@ -49,7 +49,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 
-#define logFmtHead  "[server@io] "
+#define logFmtHead  "[server@storage] "
 #define logFmtKey   "<%s> "
 #define logFmtValue "\"%s\""
 
@@ -60,15 +60,15 @@ static int cred_check(void *credbook, const struct ucred *cred, io_type_t type, 
 }
 
 static int local_get(const char *key, const value_t **value, timestamp_t *duration) {
-    int      ret = 0;
-    io_ctx_t io;
+    int           ret = 0;
+    storage_ctx_t storage;
 
     if (g_cache) {
         ret = cache_get(g_cache, key, value, duration);
         if (ret != ENOENT) return ret;
     }
 
-    ret = route_match(g_route, key, &io);
+    ret = route_match(g_route, key, &storage);
     if (ret) return ret;
 
     ret = named_mutex_lock(g_nmtx_ns, key);
@@ -76,7 +76,7 @@ static int local_get(const char *key, const value_t **value, timestamp_t *durati
         logfE(logFmtHead logFmtKey "fail to lock key" logFmtRet, key, ret);
         return ret;
     }
-    ret = io_get(&io, key, value, duration);
+    ret = storage_get(&storage, key, value, duration);
     if (!ret) {
         if (g_cache) cache_set(g_cache, key, *value, *duration);
     }
@@ -86,10 +86,10 @@ static int local_get(const char *key, const value_t **value, timestamp_t *durati
 }
 
 static int local_set(const char *key, const value_t *value) {
-    int      ret = 0;
-    io_ctx_t io;
+    int           ret = 0;
+    storage_ctx_t storage;
 
-    ret = route_match(g_route, key, &io);
+    ret = route_match(g_route, key, &storage);
     if (ret) return ret;
 
     ret = named_mutex_lock(g_nmtx_ns, key);
@@ -97,7 +97,7 @@ static int local_set(const char *key, const value_t *value) {
         logfE(logFmtHead logFmtKey "fail to lock key" logFmtRet, key, ret);
         return ret;
     }
-    ret = io_set(&io, key, value);
+    ret = storage_set(&storage, key, value);
     if (!ret) {
         if (g_cache) cache_set(g_cache, key, value, 0);
     }
@@ -107,10 +107,10 @@ static int local_set(const char *key, const value_t *value) {
 }
 
 static int local_del(const char *key) {
-    int      ret = 0;
-    io_ctx_t io;
+    int           ret = 0;
+    storage_ctx_t storage;
 
-    ret = route_match(g_route, key, &io);
+    ret = route_match(g_route, key, &storage);
     if (ret) return ret;
 
     ret = named_mutex_lock(g_nmtx_ns, key);
@@ -118,7 +118,7 @@ static int local_del(const char *key) {
         logfE(logFmtHead logFmtKey "fail to lock key" logFmtRet, key, ret);
         return ret;
     }
-    ret = io_del(&io, key);
+    ret = storage_del(&storage, key);
     if (!ret) {
         if (g_cache) cache_del(g_cache, key);
     }

@@ -39,9 +39,9 @@ extern void       *g_cache;
 extern void       *g_route;
 
 #define PathFmt_CtrlServer "%s/propd.%s.ctrl"
-#define PathFmt_IOServer   "%s/propd.%s.io"
-#define PathFmt_CtrlClient "%s/prop.%s.ctrl"
-#define PathFmt_IOClient   "%s/prop.%s.io"
+#define PathFmt_IOServer   "%s/propd.%s.storage"
+// #define PathFmt_CtrlClient "%s/prop.%s.ctrl"
+// #define PathFmt_IOClient   "%s/prop.%s.storage"
 
 enum propd_errno {
     PROPD_E_SUCCESS = 0,

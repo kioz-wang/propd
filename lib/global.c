@@ -1,9 +1,9 @@
 /**
- * @file main.c
+ * @file global.c
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
- * @date 2025-12-15
+ * @date 2025-12-25
  *
  * @copyright MIT License
  *
@@ -28,20 +28,16 @@
  *  SOFTWARE.
  */
 
-#include "builtin/builtin.h"
-#include "propd.h"
+#include "global.h"
+#include <stdio.h>
 
-int main(int argc, char *argv[]) {
-    propd_config_t config;
+void *g_credbook = NULL; /* TODO 只有 storage server 在用，启动时传入；改成 propd_run 局部变量 */
+void *g_pool     = NULL; /* TODO 只有 server 在用，启动时传入；改成 propd_run 局部变量 */
+void *g_nmtx_ns  = NULL; /* TODO 只有 server 在用，启动时传入；改成 propd_run 局部变量 */
+void *g_cache    = NULL; /* TODO 只有 server 在用，启动时传入；改成 propd_run 局部变量 */
+void *g_route    = NULL; /* TODO 只有 server 在用，启动时传入；改成 propd_run 局部变量 */
 
-    propd_config_default(&config);
-
-    propd_config_apply_parser(&config, &file_parseConfig);
-
-    propd_config_parse(&config, argc, argv);
-
-    /* TODO register some local storage by code if you want */
-    // int ret = propd_register(storage, "node_name", 0, NULL);
-
-    return propd_run(&config);
+int propd_errno_map(void /* errno */) {
+    ;
+    return 0;
 }

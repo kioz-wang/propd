@@ -117,8 +117,8 @@ static int file_del(const char *root, const char *key) {
     return ret;
 }
 
-io_ctx_t *io_constructor_file(const char *name, const char *dir) {
-    io_ctx_t *ctx = (io_ctx_t *)calloc(1, sizeof(io_ctx_t));
+storage_ctx_t *io_constructor_file(const char *name, const char *dir) {
+    storage_ctx_t *ctx = (storage_ctx_t *)calloc(1, sizeof(storage_ctx_t));
     if (!ctx) return NULL;
 
     if (access(dir, F_OK) == -1) {
@@ -145,12 +145,12 @@ io_ctx_t *io_constructor_file(const char *name, const char *dir) {
     return ctx;
 }
 
-static io_ctx_t *parse(const char *name, const char **args) {
+static storage_ctx_t *parse(const char *name, const char **args) {
     ;
     return io_constructor_file(name, args[0]);
 }
 
-io_parseConfig_t file_parseConfig = {
+storage_parseConfig_t file_parseConfig = {
     .name    = "file",
     .argName = "<DIR>",
     .note    = "注册类型为file的本地IO。DIR是file IO的根目录",

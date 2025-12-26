@@ -32,11 +32,11 @@
 #include "builtin/builtin.h"
 #include "cache.h"
 #include "global.h"
-#include "io.h"
 #include "logger/logger.h"
 #include "misc.h"
 #include "named_mutex.h"
 #include "route.h"
+#include "storage.h"
 #include "thread_pool.h"
 #include <assert.h>
 #include <errno.h>
@@ -53,19 +53,19 @@
 #define logFmtHead "[server@ctrl] "
 
 static int register_child(const ctrl_package_register_child_t *child) {
-    int       ret = 0;
-    io_ctx_t *io;
+    int            ret = 0;
+    storage_ctx_t *storage;
 
     if (!child->num_cache_now && !child->num_prefix) {
         logfE(logFmtHead "deny to register empty child");
         return -1;
     }
 
-    io = io_constructor_unix(child->name, child->name);
-    if (!io) {
+    storage = io_constructor_unix(child->name, child->name);
+    if (!storage) {
         return -1;
     }
-    pthread_cleanup_push((void (*)(void *))io_destructor, io);
+    pthread_cleanup_push((void (*)(void *))storage_destructor, storage);
 
     for (uint32_t i = 0; i < child->num_cache_now; i++) {
         const value_t *value;
@@ -77,7 +77,7 @@ static int register_child(const ctrl_package_register_child_t *child) {
             logfE(logFmtHead "fail to lock name" logFmtRet, ret);
             break;
         }
-        ret = io_get(io, key, &value, &duration);
+        ret = storage_get(storage, key, &value, &duration);
         if (ret) {
             logfE(logFmtHead "fail to get %s" logFmtRet, key, ret);
         } else {
@@ -95,7 +95,7 @@ static int register_child(const ctrl_package_register_child_t *child) {
         if (prefix) {
             for (uint32_t i = 0; i < child->num_prefix; i++)
                 prefix[i] = child->cache_now_then_prefix[child->num_cache_now + i];
-            ret = route_register(g_route, io, child->num_prefix, prefix);
+            ret = route_register(g_route, storage, child->num_prefix, prefix);
             free(prefix);
         } else {
             ret = -1;

@@ -1,5 +1,5 @@
 /**
- * @file io.h
+ * @file storage.h
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
@@ -28,8 +28,8 @@
  *  SOFTWARE.
  */
 
-#ifndef __PROPD_IO_H
-#define __PROPD_IO_H
+#ifndef __PROPD_STORAGE_H
+#define __PROPD_STORAGE_H
 
 #include "timestamp.h"
 #include "value.h"
@@ -41,7 +41,7 @@
  * - Returns 0 on success, -1 otherwise (errors are passed through logs and errno)
  * - Need to consider concurrency when different keys
  */
-struct io_ctx {
+struct storage_ctx {
     const char *name; /* duplicated in constructor, release in destructor */
     void       *priv; /* allocated in constructor, release in destructor */
     int (*get)(void *priv, const char * /* not null */, const value_t ** /* not null */, timestamp_t * /* not null */);
@@ -49,21 +49,21 @@ struct io_ctx {
     int (*del)(void *priv, const char * /* not null */);
     void (*destructor)(void *priv);
 };
-typedef struct io_ctx io_ctx_t;
+typedef struct storage_ctx storage_ctx_t;
 
-int  io_get(const io_ctx_t *io, const char *key, const value_t **value, timestamp_t *duration);
-int  io_set(const io_ctx_t *io, const char *key, const value_t *value);
-int  io_del(const io_ctx_t *io, const char *key);
-void io_destructor(io_ctx_t *io);
+int  storage_get(const storage_ctx_t *storage, const char *key, const value_t **value, timestamp_t *duration);
+int  storage_set(const storage_ctx_t *storage, const char *key, const value_t *value);
+int  storage_del(const storage_ctx_t *storage, const char *key);
+void storage_destructor(storage_ctx_t *storage);
 
-struct io_parseConfig {
+struct storage_parseConfig {
     const char *name;
     const char *argName;
     const char *note;
     int         argNum;
-    io_ctx_t *(*parse)(const char * /* not null */, const char ** /* not null */);
-    LIST_ENTRY(io_parseConfig) entry;
+    storage_ctx_t *(*parse)(const char * /* not null */, const char ** /* not null */);
+    LIST_ENTRY(storage_parseConfig) entry;
 };
-typedef struct io_parseConfig io_parseConfig_t;
+typedef struct storage_parseConfig storage_parseConfig_t;
 
-#endif /* __PROPD_IO_H */
+#endif /* __PROPD_STORAGE_H */

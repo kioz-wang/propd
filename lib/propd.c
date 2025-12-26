@@ -32,12 +32,12 @@
 #include "cache.h"
 #include "ctrl_server.h"
 #include "global.h"
-#include "io.h"
 #include "io_server.h"
 #include "logger/logger.h"
 #include "misc.h"
 #include "named_mutex.h"
 #include "route.h"
+#include "storage.h"
 #include "thread_pool.h"
 #include <errno.h>
 #include <fcntl.h>
@@ -55,17 +55,6 @@ void __attribute__((constructor)) __propd_env_parse(void) {
     if (namespace_s && namespace_s[0]) {
         g_at = namespace_s;
     }
-}
-
-void *g_credbook = NULL;
-void *g_pool     = NULL;
-void *g_nmtx_ns  = NULL;
-void *g_cache    = NULL;
-void *g_route    = NULL;
-
-int propd_errno_map(void /* errno */) {
-    ;
-    return 0;
 }
 
 void propd_config_default(propd_config_t *config) {
@@ -93,10 +82,11 @@ void propd_config_default(propd_config_t *config) {
     LIST_INIT(&config->io_parseConfigs);
 }
 
-int propd_config_register(propd_config_t *config, io_ctx_t *io_ctx, uint32_t num_prefix, const char *prefix[]) {
-    route_item_t *item = route_item_create(io_ctx, num_prefix, prefix);
+int propd_config_register(propd_config_t *config, storage_ctx_t *storage_ctx, uint32_t num_prefix,
+                          const char *prefix[]) {
+    route_item_t *item = route_item_create(storage_ctx, num_prefix, prefix);
     if (!item) {
-        fprintf(stderr, "fail to create a route item named %s" logFmtErrno "\n", io_ctx->name, logArgErrno);
+        fprintf(stderr, "fail to create a route item named %s" logFmtErrno "\n", storage_ctx->name, logArgErrno);
         return errno;
     }
     LIST_INSERT_HEAD(&config->local_route, item, entry);
@@ -104,8 +94,8 @@ int propd_config_register(propd_config_t *config, io_ctx_t *io_ctx, uint32_t num
 }
 
 static void help_message(const propd_config_t *config) {
-    io_parseConfig_t *parseConfig;
-    const char       *message;
+    storage_parseConfig_t *parseConfig;
+    const char            *message;
 
     // clang-format off
     fputs("propd [--loglevel <LOGLEVEL>] [--namespace <DIR>] [--enable-cache <INTERVAL>] [--default-duration <INTERVAL>] [--name <NAME>] [--caches <KEYS>] [--prefixes <PREFIXES>] [--children <NAMES>] [--parents <NAMES>] [-D|--daemon]\n", stderr);
@@ -164,16 +154,16 @@ static const struct option g_longopts[] = {
     // clang-format on
 };
 
-void propd_config_apply_parser(propd_config_t *config, io_parseConfig_t *parseConfig) {
+void propd_config_apply_parser(propd_config_t *config, storage_parseConfig_t *parseConfig) {
     LIST_INSERT_HEAD(&config->io_parseConfigs, parseConfig, entry);
 }
 
 void propd_config_parse(propd_config_t *config, int argc, char *argv[]) {
-    const char       *shortopts   = "hvN:n:D";
-    struct option    *longopts    = NULL;
-    int               num_longopt = 0;
-    io_parseConfig_t *parseConfig;
-    int               num_parseConfig = 0;
+    const char            *shortopts   = "hvN:n:D";
+    struct option         *longopts    = NULL;
+    int                    num_longopt = 0;
+    storage_parseConfig_t *parseConfig;
+    int                    num_parseConfig = 0;
 
     for (int i = 0; g_longopts[i].name; i++) {
         num_longopt++;
@@ -275,17 +265,17 @@ void propd_config_parse(propd_config_t *config, int argc, char *argv[]) {
                         parseConfig->argName);
                 goto error;
             }
-            const char  *name     = args[parseConfig->argNum];
-            const char **prefixes = &args[parseConfig->argNum + 1];
-            io_ctx_t    *io_ctx   = parseConfig->parse(name, args);
-            if (!io_ctx) {
+            const char    *name        = args[parseConfig->argNum];
+            const char   **prefixes    = &args[parseConfig->argNum + 1];
+            storage_ctx_t *storage_ctx = parseConfig->parse(name, args);
+            if (!storage_ctx) {
                 fprintf(stderr, "fail to create a route item named %s" logFmtErrno "\n", name, logArgErrno);
                 goto error;
             }
-            route_item_t *item = route_item_create(io_ctx, 0, prefixes);
+            route_item_t *item = route_item_create(storage_ctx, 0, prefixes);
             if (!item) {
                 fprintf(stderr, "fail to create a route item named %s" logFmtErrno "\n", name, logArgErrno);
-                io_destructor(io_ctx);
+                storage_destructor(storage_ctx);
                 goto error;
             }
             LIST_INSERT_HEAD(&config->local_route, item, entry);
@@ -380,7 +370,7 @@ static int __propd_run(const propd_config_t *config, int *syncfd) {
     if (!ret) {
         ret = io_start_server(name, &io_tid);
         if (ret) {
-            logfE("fail to start io server" logFmtErrno, logArgErrno);
+            logfE("fail to start storage server" logFmtErrno, logArgErrno);
         } else ctrl_tid_p = &ctrl_tid;
     }
 

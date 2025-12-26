@@ -1,5 +1,5 @@
 /**
- * @file io.c
+ * @file storage.c
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
@@ -28,22 +28,22 @@
  *  SOFTWARE.
  */
 
-#include "io.h"
+#include "storage.h"
 #include "global.h"
 #include "logger/logger.h"
 
-#define logFmtHead  "[io@%s] <%s> "
-#define logArgHead  io->name, key
+#define logFmtHead  "[storage@%s] <%s> "
+#define logArgHead  storage->name, key
 #define logFmtValue "\"%s\""
 
-int io_get(const io_ctx_t *io, const char *key, const value_t **value, timestamp_t *duration) {
+int storage_get(const storage_ctx_t *storage, const char *key, const value_t **value, timestamp_t *duration) {
     assert(key);
     assert(value);
-    if (!io->get) return -RPOPD_E_OPNOTSUPP;
+    if (!storage->get) return -RPOPD_E_OPNOTSUPP;
 
     timestamp_t _duration;
 
-    int ret = io->get(io->priv, key, value, &_duration);
+    int ret = storage->get(storage->priv, key, value, &_duration);
     if (!ret && duration) *duration = _duration;
     if (ret) {
         logfE(logFmtHead "fail to get" logFmtErrno, logArgHead, logArgErrno);
@@ -54,15 +54,15 @@ int io_get(const io_ctx_t *io, const char *key, const value_t **value, timestamp
     }
     return propd_errno_map();
 }
-int io_set(const io_ctx_t *io, const char *key, const value_t *value) {
+int storage_set(const storage_ctx_t *storage, const char *key, const value_t *value) {
     assert(key);
     assert(value);
-    if (!io->set) return -RPOPD_E_OPNOTSUPP;
+    if (!storage->set) return -RPOPD_E_OPNOTSUPP;
 
     char buffer[256];
     value_fmt(buffer, sizeof(buffer), value, false);
 
-    int ret = io->set(io->priv, key, value);
+    int ret = storage->set(storage->priv, key, value);
     if (ret) {
         logfE(logFmtHead "fail to set " logFmtValue logFmtErrno, logArgHead, buffer, logArgErrno);
     } else {
@@ -70,11 +70,11 @@ int io_set(const io_ctx_t *io, const char *key, const value_t *value) {
     }
     return propd_errno_map();
 }
-int io_del(const io_ctx_t *io, const char *key) {
+int storage_del(const storage_ctx_t *storage, const char *key) {
     assert(key);
-    if (!io->del) return -RPOPD_E_OPNOTSUPP;
+    if (!storage->del) return -RPOPD_E_OPNOTSUPP;
 
-    int ret = io->del(io->priv, key);
+    int ret = storage->del(storage->priv, key);
     if (ret) {
         logfE(logFmtHead "fail to del" logFmtErrno, logArgHead, logArgErrno);
     } else {
@@ -82,8 +82,8 @@ int io_del(const io_ctx_t *io, const char *key) {
     }
     return propd_errno_map();
 }
-void io_destructor(io_ctx_t *io) {
-    if (io->destructor) io->destructor(io->priv);
-    free((void *)io->name);
-    free(io);
+void storage_destructor(storage_ctx_t *storage) {
+    if (storage->destructor) storage->destructor(storage->priv);
+    free((void *)storage->name);
+    free(storage);
 }

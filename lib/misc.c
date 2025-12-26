@@ -36,12 +36,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/random.h>
 #include <unistd.h>
 
-void random_alphabet(char *addr, size_t length, bool upper) {
-    unsigned int seed = (unsigned int)timestamp(false);
+void random_alnum(char *addr, size_t length) {
+    unsigned int seed;
+    if (getrandom(&seed, sizeof(seed), GRND_NONBLOCK) != sizeof(seed)) {
+        seed = (unsigned int)timestamp(false) ^ getpid() ^ gettid();
+    }
     for (size_t i = 0; i < length; i++) {
-        addr[i] = (upper ? 'A' : 'a') + (rand_r(&seed) + getpid() + gettid()) % 26;
+        int  ci = rand_r(&seed) % (26 * 2 + 10);
+        char c;
+        if (ci > 26 * 2) c = '0' + ci - 26 * 2;
+        else if (ci > 26) c = 'a' + ci - 26;
+        else c = 'A' + ci;
+        addr[i] = c;
     }
 }
 

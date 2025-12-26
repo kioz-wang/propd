@@ -57,7 +57,7 @@ static int io_connect(const char *target, int *connfd) {
 
     cliaddr.sun_family  = AF_LOCAL;
     cliaddr.sun_path[0] = '\0';
-    random_alphabet(&cliaddr.sun_path[1], sizeof(cliaddr.sun_path) - 2, false);
+    random_alnum(&cliaddr.sun_path[1],  sizeof(cliaddr.sun_path) - 2);
     cliaddr.sun_path[sizeof(cliaddr.sun_path) - 1] = 'X';
 
     ret = bind(_connfd, (const struct sockaddr *)&cliaddr, sizeof(cliaddr));
@@ -221,8 +221,8 @@ static int del(const char *target, const char *key) {
     return ret;
 }
 
-io_ctx_t *io_constructor_unix(const char *name, const char *target) {
-    io_ctx_t *ctx = (io_ctx_t *)calloc(1, sizeof(io_ctx_t));
+storage_ctx_t *io_constructor_unix(const char *name, const char *target) {
+    storage_ctx_t *ctx = (storage_ctx_t *)calloc(1, sizeof(storage_ctx_t));
     if (!ctx) return NULL;
 
     if (!(ctx->name = strdup(name))) {
@@ -241,12 +241,12 @@ io_ctx_t *io_constructor_unix(const char *name, const char *target) {
     return ctx;
 }
 
-static io_ctx_t *parse(const char *name, const char **args) {
+static storage_ctx_t *parse(const char *name, const char **args) {
     ;
     return io_constructor_unix(name, args[0]);
 }
 
-io_parseConfig_t unix_parseConfig = {
+storage_parseConfig_t unix_parseConfig = {
     .name    = "unix",
     .argName = "<NAME>",
     .note    = "注册类型为unix的本地IO（与通过--children注册不同的是：不需要child具有ctrl server，且不支持“立即缓存”）",
