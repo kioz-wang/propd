@@ -1,10 +1,10 @@
 /**
- * @file global.h
+ * @file io.c
  * @author kioz.wang (never.had@outlook.com)
- * @brief
+ * @brief 
  * @version 0.1
- * @date 2025-12-04
- *
+ * @date 2025-12-26
+ * 
  * @copyright MIT License
  *
  *  Copyright (c) 2025 kioz.wang
@@ -27,36 +27,3 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *  SOFTWARE.
  */
-
-#ifndef __PROPD_GLOBAL_H
-#define __PROPD_GLOBAL_H
-
-extern const char *g_at;
-extern void       *g_credbook;
-extern void       *g_pool;
-extern void       *g_nmtx_ns;
-extern void       *g_cache;
-extern void       *g_route;
-
-#define PathFmt_CtrlServer "%s/propd.%s.ctrl"
-#define PathFmt_IOServer   "%s/propd.%s.storage"
-// #define PathFmt_CtrlClient "%s/prop.%s.ctrl"
-// #define PathFmt_IOClient   "%s/prop.%s.storage"
-
-enum propd_errno {
-    PROPD_E_SUCCESS = 0,
-    RPOPD_E_OPNOTSUPP,
-    PROPD_E_NOENT,
-    PROPD_E_NOMEM,
-    PROPD_E_NOBUFS,
-    PROPD_E_LOWLEVELIO,
-    PROPD_E_EXIST,
-    PROPD_E_BUSY,
-    PROPD_E_MISC,
-    /* compile-time error */
-    PROPD_E_UNREACHABLE,
-};
-
-int propd_errno_map(void /* errno */);
-
-#endif /* __PROPD_GLOBAL_H */

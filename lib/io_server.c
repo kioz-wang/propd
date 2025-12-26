@@ -60,8 +60,8 @@ static int cred_check(void *credbook, const struct ucred *cred, io_type_t type, 
 }
 
 static int local_get(const char *key, const value_t **value, timestamp_t *duration) {
-    int           ret = 0;
-    storage_ctx_t storage;
+    int            ret     = 0;
+    storage_ctx_t *storage = NULL;
 
     if (g_cache) {
         ret = cache_get(g_cache, key, value, duration);
@@ -70,6 +70,8 @@ static int local_get(const char *key, const value_t **value, timestamp_t *durati
 
     ret = route_match(g_route, key, &storage);
     if (ret) return ret;
+
+    /* TODO defer route_deref(g_route, storage) */
 
     ret = named_mutex_lock(g_nmtx_ns, key);
     if (ret) {

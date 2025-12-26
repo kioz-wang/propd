@@ -121,8 +121,10 @@ int named_mutex_lock(void *_ns, const char *name) {
         named_mutex_destroy(nmtx);
         nmtx = old_item;
     }
-    nmtx->nref++;
+    // nmtx->nref++;
     pthread_mutex_unlock(&ns->mutex);
+    
+    /* TODO ref_add(&nmtx.ref) */
 
     pthread_mutex_lock(&nmtx->mutex);
     return 0;
@@ -142,6 +144,17 @@ int named_mutex_unlock(void *_ns, const char *name) {
     pthread_mutex_unlock(&ns->mutex);
 
     pthread_mutex_unlock(&nmtx->mutex);
+
+    /* TODO ref_free(&nmtx.ref) */
+    /**
+     * if (ref_take(&nmtx.ref)) {
+            pthread_mutex_lock(&ns->mutex);
+                RB_REMOVE(nmtx_tree, &ns->tree, nmtx);
+                named_mutex_destroy(nmtx);
+            pthread_mutex_unlock(&ns->mutex);
+     }
+     * 
+     */
 
     pthread_mutex_lock(&ns->mutex);
     if (--nmtx->nref == 0) {

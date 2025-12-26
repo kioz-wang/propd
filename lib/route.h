@@ -37,8 +37,10 @@
 #include <sys/queue.h>
 
 struct route_item {
-    storage_ctx_t *storage_ctx;
-    const char   **prefix;
+    storage_ctx_t   storage_ctx;
+    const char    **prefix;
+    pthread_mutex_t mutex;
+    int             nref;
     LIST_ENTRY(route_item) entry;
 };
 typedef struct route_item route_item_t;
@@ -51,13 +53,13 @@ typedef struct route_item route_item_t;
  * @param prefix ref. array of arraydup_cstring
  * @return route_item_t*
  */
-route_item_t *route_item_create(storage_ctx_t *storage_ctx, uint32_t num_prefix, const char *prefix[]);
+route_item_t *route_item_create(const storage_ctx_t *storage_ctx, uint32_t num_prefix, const char *prefix[]);
 /**
  * @brief Release an item of route
  *
  * @param item （可以传入NULL）
  */
-void route_item_destroy(route_item_t *item);
+int route_item_destroy(route_item_t *item);
 
 struct route {
     LIST_HEAD(route_list, route_item) list;
@@ -87,7 +89,7 @@ void route_destroy(route_t *route);
  * @param prefix ref. array of arraydup_cstring
  * @return int ENOMEM EEXIST
  */
-int route_register(route_t *route, storage_ctx_t *storage_ctx, uint32_t num_prefix, const char *prefix[]);
+int route_register(route_t *route, const storage_ctx_t *storage_ctx, uint32_t num_prefix, const char *prefix[]);
 /**
  * @brief Unregister a route item by name
  *
@@ -104,6 +106,14 @@ int route_unregister(route_t *route, const char *name);
  * @param storage_ctx
  * @return int ENOENT
  */
-int route_match(route_t *route, const char *key, storage_ctx_t *storage_ctx);
+int route_match(route_t *route, const char *key, storage_ctx_t **storage_ctx);
+
+/**
+ * @brief
+ *
+ * @param route
+ * @param storage_ctx
+ */
+void route_deref(const storage_ctx_t *storage_ctx);
 
 #endif /* __PROPD_ROUTE_H */
