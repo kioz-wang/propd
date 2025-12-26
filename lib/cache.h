@@ -31,8 +31,7 @@
 #ifndef __PROPD_CACHE_H
 #define __PROPD_CACHE_H
 
-#include "timestamp.h"
-#include "tree.h"
+#include "infra/timestamp.h"
 #include "value.h"
 #include <pthread.h>
 #include <semaphore.h>
@@ -40,26 +39,7 @@
 
 #define DURATION_INF (INT64_MAX)
 
-struct cache_item {
-    const char    *key;
-    const value_t *value;
-    timestamp_t    modified;
-    timestamp_t    duration; /* 值为DURATION_INF时，表示永不过期*/
-    RB_ENTRY(cache_item) entry;
-};
-typedef struct cache_item cache_item_t;
-
-struct cache {
-    RB_HEAD(cache_tree, cache_item) tree;
-    timestamp_t      min_interval;
-    timestamp_t      max_interval;
-    timestamp_t      default_duration;
-    timestamp_t      min_duration;
-    pthread_rwlock_t rwlock;
-    sem_t            clean_notice;
-    pthread_t        cleaner;
-};
-typedef struct cache cache_t;
+const char *duration_fmt(char *buffer, size_t length, timestamp_t duration);
 
 /**
  * @brief Allocate and initialize a cache, and start a cleaner
@@ -68,16 +48,16 @@ typedef struct cache cache_t;
  * @param max_interval 长时间未主动触发过期回收时，将自动执行一次
  * @param default_duration 以下情况中，调整为该值：set时，若传入duration为0
  * @param min_duration 以下情况中，调整为该值：set时，若传入duration不为0且小于；get时，若剩余duration小于
- * @return cache_t* 缓存对象
+ * @return void* 缓存对象（On error, return NULL and set errno）
  */
-cache_t *cache_create(timestamp_t min_interval, timestamp_t max_interval, timestamp_t default_duration,
-                      timestamp_t min_duration);
+void *cache_create(timestamp_t min_interval, timestamp_t max_interval, timestamp_t default_duration,
+                   timestamp_t min_duration);
 /**
  * @brief Release a cache
  *
- * @param cache 缓存对象（可以传入NULL）
+ * @param cache 缓存对象（maybe NULL）
  */
-void cache_destroy(cache_t *cache);
+void cache_destroy(void *cache);
 /**
  * @brief Get value (allocated) and duration of a key
  *
@@ -85,9 +65,9 @@ void cache_destroy(cache_t *cache);
  * @param key
  * @param value
  * @param duration
- * @return int ENOENT ENOMEM
+ * @return int errno (ENOENT ENOMEM)
  */
-int cache_get(cache_t *cache, const char *key, const value_t **value, timestamp_t *duration);
+int cache_get(void *cache, const char *key, const value_t **value, timestamp_t *duration);
 /**
  * @brief Set a key with value (no ownership transfer) and duraion. Update if exist
  *
@@ -96,16 +76,16 @@ int cache_get(cache_t *cache, const char *key, const value_t **value, timestamp_
  * @param value
  * @param duration
  * 传入0时，设置为dufault_duration；否则小于min_duration时，上调至min_duration；否则若等于DURATION_INF，则永不过期
- * @return int ENOMEM
+ * @return int errno (ENOMEM)
  */
-int cache_set(cache_t *cache, const char *key, const value_t *value, timestamp_t duration);
+int cache_set(void *cache, const char *key, const value_t *value, timestamp_t duration);
 /**
  * @brief Delete a key
  *
  * @param cache 缓存对象
  * @param key
- * @return int ENOENT
+ * @return int errno (ENOENT)
  */
-int cache_del(cache_t *cache, const char *key);
+int cache_del(void *cache, const char *key);
 
 #endif /* __PROPD_CACHE_H */

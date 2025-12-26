@@ -3,7 +3,7 @@
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
- * @date 2025-12-15
+ * @date 2025-12-26
  *
  * @copyright MIT License
  *
@@ -31,39 +31,50 @@
 #ifndef __PROPD_IO_H
 #define __PROPD_IO_H
 
-#include "timestamp.h"
-#include "value.h"
-#include <sys/queue.h>
+#include "storage.h"
 
-/**
- * Requirements for IO functions:
- * - No persistent blocking (timeout needs to be implemented)
- * - Returns 0 on success, -1 otherwise (errors are passed through logs and errno)
- * - Need to consider concurrency when different keys
- */
 struct io_ctx {
-    const char *name; /* duplicated in constructor, release in destructor */
-    void       *priv; /* allocated in constructor, release in destructor */
-    int (*get)(void *priv, const char * /* not null */, const value_t ** /* not null */, timestamp_t * /* not null */);
-    int (*set)(void *priv, const char * /* not null */, const value_t * /* not null */);
-    int (*del)(void *priv, const char * /* not null */);
-    void (*destructor)(void *priv);
+    void *nmtx_ns;
+    void *cache;
+    void *route;
 };
 typedef struct io_ctx io_ctx_t;
 
-int  io_get(const io_ctx_t *io, const char *key, const value_t **value, timestamp_t *duration);
-int  io_set(const io_ctx_t *io, const char *key, const value_t *value);
-int  io_del(const io_ctx_t *io, const char *key);
-void io_destructor(io_ctx_t *io);
-
-struct io_parseConfig {
-    const char *name;
-    const char *argName;
-    const char *note;
-    int         argNum;
-    io_ctx_t *(*parse)(const char * /* not null */, const char ** /* not null */);
-    LIST_ENTRY(io_parseConfig) entry;
-};
-typedef struct io_parseConfig io_parseConfig_t;
+/**
+ * @brief Get key on server end
+ *
+ * @param io
+ * @param key
+ * @param value
+ * @param duration
+ * @return int errno
+ */
+int io_get(const io_ctx_t *io, const char *key, const value_t **value, timestamp_t *duration);
+/**
+ * @brief Update key cache on server end (Only used in register_child of ctrl server)
+ *
+ * @param io
+ * @param key
+ * @param storage
+ * @return int errno
+ */
+int io_update(const io_ctx_t *io, const char *key, const storage_ctx_t *storage);
+/**
+ * @brief Set key on server end
+ *
+ * @param io
+ * @param key
+ * @param value
+ * @return int errno
+ */
+int io_set(const io_ctx_t *io, const char *key, const value_t *value);
+/**
+ * @brief Del key on server end
+ *
+ * @param io
+ * @param key
+ * @return int errno
+ */
+int io_del(const io_ctx_t *io, const char *key);
 
 #endif /* __PROPD_IO_H */

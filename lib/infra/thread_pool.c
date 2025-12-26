@@ -31,6 +31,7 @@
 #include "thread_pool.h"
 #include "logger/logger.h"
 #include "timestamp.h"
+#include <assert.h>
 #include <errno.h>
 #include <pthread.h>
 #include <semaphore.h>
@@ -61,7 +62,7 @@ typedef struct task_queue task_queue_t;
 
 static int task_queue_init(task_queue_t *queue, unsigned short num) {
     task_t *_queue = (task_t *)calloc(num, sizeof(task_t));
-    if (!_queue) return ENOMEM;
+    if (!_queue) return errno;
 
     queue->num   = num;
     queue->queue = _queue;
@@ -76,7 +77,7 @@ static void task_queue_deinit(task_queue_t *queue) {
     if (queue->num) {
         pthread_mutex_destroy(&queue->mutex);    /* TODO EBUSY */
         pthread_cond_destroy(&queue->not_empty); /* TODO EBUSY */
-        pthread_cond_destroy(&queue->not_full);
+        pthread_cond_destroy(&queue->not_full);  /* TODO EBUSY */
         queue->num = 0;
         free(queue->queue);
     }
@@ -171,7 +172,8 @@ void *thread_pool_create(unsigned short thread_num, unsigned short min_if_auto, 
                              tpool->task_queue);
         if (ret) {
             tpool->num = i;
-            logfE("[thread_pool] fail to create thread[%d]" logFmtRet, i, ret);
+            errno      = ret;
+            logfE("[thread_pool] fail to create thread[%d] (%d)", i, ret);
             goto exit;
         }
     }
@@ -206,6 +208,8 @@ void thread_pool_destroy(void *_tpool) {
 }
 
 int thread_pool_submit(void *tpool, int (*routine)(void *), void *arg, bool sync) {
+    assert(tpool);
+    assert(routine);
     int    result = 0;
     sem_t  done;
     task_t task = {

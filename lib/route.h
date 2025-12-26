@@ -31,27 +31,30 @@
 #ifndef __PROPD_ROUTE_H
 #define __PROPD_ROUTE_H
 
-#include "io.h"
-#include <pthread.h>
+#include "storage.h"
+#include <stdatomic.h>
 #include <stdint.h>
 #include <sys/queue.h>
 
 struct route_item {
-    io_ctx_t    *io_ctx;
-    const char **prefix;
+    storage_ctx_t storage_ctx; /* dont change! see `route_deref` */
+    const char  **prefix;
+    atomic_int    nref;
     LIST_ENTRY(route_item) entry;
 };
 typedef struct route_item route_item_t;
 
+LIST_HEAD(route_list, route_item);
+
 /**
  * @brief Allocate and initialize an item of route
  *
- * @param io_ctx
- * @param num_prefix ref. length of arraydup_cstring
- * @param prefix ref. array of arraydup_cstring
- * @return route_item_t*
+ * @param storage_ctx
+ * @param num_prefix (ref. length of arraydup_cstring)
+ * @param prefix (ref. array of arraydup_cstring)
+ * @return route_item_t* On error, return NULL and set errno
  */
-route_item_t *route_item_create(io_ctx_t *io_ctx, uint32_t num_prefix, const char *prefix[]);
+route_item_t *route_item_create(const storage_ctx_t *storage_ctx, uint32_t num_prefix, const char *prefix[]);
 /**
  * @brief Release an item of route
  *
@@ -59,51 +62,60 @@ route_item_t *route_item_create(io_ctx_t *io_ctx, uint32_t num_prefix, const cha
  */
 void route_item_destroy(route_item_t *item);
 
-struct route {
-    LIST_HEAD(route_list, route_item) list;
-    pthread_rwlock_t rwlock;
-};
-typedef struct route route_t;
-
 /**
  * @brief Allocate and initialize a route
  *
- * @return route_t* 路由表对象
+ * @return void* 路由表对象（On error, return NULL and set errno）
  */
-route_t *route_create(void);
+void *route_create(void);
 /**
  * @brief Release a route
  *
  * @param route 路由表对象（可以传入NULL）
  */
-void route_destroy(route_t *route);
+void route_destroy(void *route);
+/**
+ * @brief Initialize route
+ *
+ * @param route
+ * @param list
+ */
+void route_init(void *route, struct route_list list);
 
 /**
  * @brief Register a route item
  *
  * @param route 路由表对象
- * @param io_ctx
- * @param num_prefix ref. length of arraydup_cstring
- * @param prefix ref. array of arraydup_cstring
- * @return int ENOMEM EEXIST
+ * @param storage_ctx
+ * @param num_prefix (ref. length of arraydup_cstring)
+ * @param prefix (ref. array of arraydup_cstring)
+ * @return int errno
  */
-int route_register(route_t *route, io_ctx_t *io_ctx, uint32_t num_prefix, const char *prefix[]);
+int route_register(void *route, const storage_ctx_t *storage_ctx, uint32_t num_prefix, const char *prefix[]);
 /**
  * @brief Unregister a route item by name
  *
  * @param route 路由表对象
  * @param name 路由表项的名称。传入NULL时，注销首个表项
- * @return int ENOENT
+ * @return int errno
  */
-int route_unregister(route_t *route, const char *name);
+int route_unregister(void *route, const char *name);
 /**
- * @brief Get io of the route item that matches key
+ * @brief Get storage of the route item that matches key
  *
  * @param route 路由表对象
  * @param key
- * @param io_ctx
- * @return int ENOENT
+ * @param storage_ctx
+ * @return int errno
  */
-int route_match(route_t *route, const char *key, io_ctx_t *io_ctx);
+int route_match(void *route, const char *key, const storage_ctx_t **storage_ctx);
+
+/**
+ * @brief
+ *
+ * @param route
+ * @param storage_ctx
+ */
+void route_deref(const storage_ctx_t *storage_ctx);
 
 #endif /* __PROPD_ROUTE_H */

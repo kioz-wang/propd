@@ -37,11 +37,12 @@ int main(int argc, char *argv[]) {
     propd_config_default(&config);
 
     propd_config_apply_parser(&config, &file_parseConfig);
+    propd_config_apply_parser(&config, &unix_parseConfig);
 
     propd_config_parse(&config, argc, argv);
 
-    /* TODO register some local io by code if you want */
-    // int ret = propd_register(io, "node_name", 0, NULL);
+    /* TODO register some local storage by code if you want */
+    // int ret = propd_register(storage, "node_name", 0, NULL);
 
     return propd_run(&config);
 }

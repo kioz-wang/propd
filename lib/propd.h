@@ -31,9 +31,9 @@
 #ifndef __PROPD_H
 #define __PROPD_H
 
+#include "infra/timestamp.h"
 #include "logger/logger.h"
 #include "route.h"
-#include "timestamp.h"
 #include <sys/queue.h>
 
 struct propd_config {
@@ -58,14 +58,15 @@ struct propd_config {
     const char **parents;
     bool         daemon;
 
-    LIST_HEAD(, io_parseConfig) io_parseConfigs;
+    LIST_HEAD(, storage_parseConfig) io_parseConfigs;
 };
 typedef struct propd_config propd_config_t;
 
 void propd_config_default(propd_config_t *config);
-int  propd_config_register(propd_config_t *config, io_ctx_t *io_ctx, uint32_t num_prefix, const char *prefix[]);
+int  propd_config_register(propd_config_t *config, const storage_ctx_t *storage_ctx, uint32_t num_prefix,
+                           const char *prefix[]);
 
-void propd_config_apply_parser(propd_config_t *config, io_parseConfig_t *parseConfig);
+void propd_config_apply_parser(propd_config_t *config, storage_parseConfig_t *parseConfig);
 void propd_config_parse(propd_config_t *config, int argc, char *argv[]);
 
 int propd_run(const propd_config_t *config);

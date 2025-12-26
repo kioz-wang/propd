@@ -29,46 +29,42 @@
  */
 
 #include "builtin.h"
+#include "global.h"
 #include "logger/logger.h"
 #include <errno.h>
 
-#define logFmtHead  "[bridge][tcp] "
-#define logFmtKey   "<%s> "
-#define logFmtValue "\"%s\""
+#define logFmtHead "[storage::(tcp)] "
 
 struct priv {
     /* TODO */;
 };
 typedef struct priv priv_t;
 
-io_ctx_t *io_constructor_tcp(const char *name, const char *ip, unsigned short port) {
-    io_ctx_t *ctx = (io_ctx_t *)calloc(1, sizeof(io_ctx_t));
-    if (!ctx) return NULL;
-
+int constructor_tcp(storage_ctx_t *ctx, const char *name, const char *ip, unsigned short port) {
     if (!(ctx->name = strdup(name))) {
         logfE(logFmtHead "fail to allocate name" logFmtErrno, logArgErrno);
-        return NULL;
+        return errno;
     }
 
     priv_t *priv = (priv_t *)malloc(sizeof(priv_t));
     if (!priv) {
         logfE(logFmtHead "fail to allocate priv" logFmtErrno, logArgErrno);
-        return NULL;
+        return errno;
     }
 
     ctx->priv       = priv;
     ctx->destructor = free;
-    return ctx;
+    return EOPNOTSUPP;
 }
 
-static io_ctx_t *parse(const char *name, const char **args) {
+static int parse(storage_ctx_t *ctx, const char *name, const char **args) {
     unsigned short port = strtoul(args[1], NULL, 0);
-    return io_constructor_tcp(name, args[0], port);
+    return constructor_tcp(ctx, name, args[0], port);
 }
 
-io_parseConfig_t tcp_parseConfig = {
+storage_parseConfig_t tcp_parseConfig = {
     .name    = "tcp",
-    .argName = "<IP>,<PORT>",
+    .argName = "<IP>,<PORT>,",
     .note    = "注册类型为tcp的本地IO。IP，PORT是tcp IO需要连接的目标",
     .argNum  = 2,
     .parse   = parse,

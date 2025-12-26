@@ -31,6 +31,7 @@
 #ifndef __PROPD_CTRL_SERVER_H
 #define __PROPD_CTRL_SERVER_H
 
+#include "io.h"
 #include <linux/limits.h>
 #include <pthread.h>
 #include <stdbool.h>
@@ -71,7 +72,7 @@ typedef struct ctrl_package ctrl_package_t;
  * @param name 路由表项名
  * @param cache_now
  * @param prefix
- * @return int
+ * @return int errno
  */
 int ctrl_register_child(const char *server, const char *name, const char *cache_now[], const char *prefix[]);
 /**
@@ -79,7 +80,7 @@ int ctrl_register_child(const char *server, const char *name, const char *cache_
  *
  * @param server server节点名
  * @param name another server
- * @return int
+ * @return int errno
  */
 int ctrl_register_parent(const char *server, const char *name);
 /**
@@ -87,7 +88,7 @@ int ctrl_register_parent(const char *server, const char *name);
  *
  * @param server server节点名
  * @param name 路由表项名
- * @return int
+ * @return int errno
  */
 int ctrl_unregister_child(const char *server, const char *name);
 /**
@@ -95,7 +96,7 @@ int ctrl_unregister_child(const char *server, const char *name);
  *
  * @param server server节点名
  * @param name another server
- * @return int
+ * @return int errno
  */
 int ctrl_unregister_parent(const char *server, const char *name);
 /**
@@ -103,7 +104,7 @@ int ctrl_unregister_parent(const char *server, const char *name);
  *
  * @param server server节点名
  * @param db
- * @return int
+ * @return int errno
  */
 int ctrl_dump_db_route(const char *server, void **db);
 /**
@@ -111,7 +112,7 @@ int ctrl_dump_db_route(const char *server, void **db);
  *
  * @param server server节点名
  * @param db
- * @return int
+ * @return int errno
  */
 int ctrl_dump_db_cache(const char *server, void **db);
 
@@ -121,13 +122,15 @@ int ctrl_dump_db_cache(const char *server, void **db);
  * @brief Start ctrl server
  *
  * @param name server节点名
- * @param num_prefix_max
+ * @param thread_pool
+ * @param io_ctx
  * @param cache_now
  * @param prefix
+ * @param num_prefix_max
  * @param tid 返回ctrl server线程id，用于终止；传入NULL时，阻塞等待
- * @return int
+ * @return int errno
  */
-int ctrl_start_server(const char *name, uint32_t num_prefix_max, const char *cache_now[], const char *prefix[],
-                      pthread_t *tid);
+int start_ctrl_server(const char *name, void *thread_pool, const io_ctx_t *io_ctx, const char *cache_now[],
+                      const char *prefix[], uint32_t num_prefix_max, pthread_t *tid);
 
 #endif /* __PROPD_CTRL_SERVER_H */

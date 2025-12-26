@@ -31,7 +31,7 @@
 #include "builtin/builtin.h"
 #include "ctrl_server.h"
 #include "global.h"
-#include "io.h"
+#include "storage.h"
 #include <getopt.h>
 #include <stdio.h>
 #include <string.h>
@@ -71,15 +71,15 @@ static int command_get(int argc, char *argv[]) {
         return UINT8_MAX;
     }
 
-    int       ret = 0;
-    io_ctx_t *io  = io_constructor_unix(g_server, g_server);
-    if (!io) {
+    int           ret     = 0;
+    storage_ctx_t storage = {0};
+    if (constructor_unix(&storage, g_server)) {
         return -1;
     }
     for (int i = 1; argv[i]; i++) {
         const char    *key   = argv[i];
         const value_t *value = NULL;
-        ret                  = io_get(io, key, &value, NULL);
+        ret                  = storage_get(&storage, key, &value, NULL);
         if (ret == 0) {
             char buffer[512] = {0};
             puts(value_fmt(buffer, sizeof(buffer), value, true));
@@ -88,7 +88,7 @@ static int command_get(int argc, char *argv[]) {
             fprintf(stderr, "fail to get %s (%d)\n", key, ret);
         }
     }
-    io_destructor(io);
+    storage_destructor(&storage);
     return ret;
 }
 
@@ -98,16 +98,16 @@ static int command_set(int argc, char *argv[]) {
         return UINT8_MAX;
     }
 
-    int       ret = 0;
-    io_ctx_t *io  = io_constructor_unix(g_server, g_server);
-    if (!io) {
+    int            ret     = 0;
+    storage_ctx_t storage = {0};
+    if (constructor_unix(&storage, g_server)) {
         return -1;
     }
     for (int i = 1; argv[i]; i += 2) {
         const char    *key       = argv[i];
         const char    *value_str = argv[i + 1];
         const value_t *value     = value_parse(value_str);
-        ret                      = io_set(io, key, value);
+        ret                      = storage_set(&storage, key, value);
         if (ret == 0) {
             fprintf(stderr, "set %s to %s\n", key, value_str);
         } else {
@@ -115,7 +115,7 @@ static int command_set(int argc, char *argv[]) {
         }
         free((void *)value);
     }
-    io_destructor(io);
+    storage_destructor(&storage);
     return ret;
 }
 
@@ -125,21 +125,21 @@ static int command_del(int argc, char *argv[]) {
         return UINT8_MAX;
     }
 
-    int       ret = 0;
-    io_ctx_t *io  = io_constructor_unix(g_server, g_server);
-    if (!io) {
+    int            ret     = 0;
+    storage_ctx_t storage = {0};
+    if (constructor_unix(&storage, g_server)) {
         return -1;
     }
     for (int i = 1; argv[i]; i++) {
         const char *key = argv[i];
-        ret             = io_del(io, key);
+        ret             = storage_del(&storage, key);
         if (ret == 0) {
             fprintf(stderr, "del %s\n", key);
         } else {
             fprintf(stderr, "fail to del %s (%d)\n", key, ret);
         }
     }
-    io_destructor(io);
+    storage_destructor(&storage);
     return ret;
 }
 

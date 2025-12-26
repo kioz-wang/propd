@@ -1,9 +1,9 @@
 /**
- * @file named_mutex.h
+ * @file timestamp.h
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
- * @date 2025-12-11
+ * @date 2025-12-03
  *
  * @copyright MIT License
  *
@@ -28,36 +28,57 @@
  *  SOFTWARE.
  */
 
-#ifndef __NAMED_MUTEX_H
-#define __NAMED_MUTEX_H
+#ifndef __TIMESTAMP_H
+#define __TIMESTAMP_H
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <time.h>
 
 /**
- * @brief Create a namespace of named_mutexs
+ * @brief unit: nano second
  *
- * @return void*
  */
-void *named_mutex_create_namespace(void);
-/**
- * @brief Destroy a namespce of named_mutex
- *
- * @param ns
- */
-void named_mutex_destroy_namespace(void *ns);
-/**
- * @brief Lock a name
- *
- * @param ns
- * @param name
- * @return int ENOMEM
- */
-int named_mutex_lock(void *ns, const char *name);
-/**
- * @brief Unlock a name
- *
- * @param ns
- * @param name
- * @return int ENOENT
- */
-int named_mutex_unlock(void *ns, const char *name);
+typedef int64_t timestamp_t;
 
-#endif /* __NAMED_MUTEX_H */
+/**
+ * @brief Monotonic timestamp
+ *
+ * @param monotonic
+ * @return timestamp_t
+ */
+static inline timestamp_t timestamp(bool monotonic) {
+    struct timespec ts;
+    clock_gettime(monotonic ? CLOCK_MONOTONIC : CLOCK_REALTIME, &ts);
+    return ts.tv_sec * 1000000000L + ts.tv_nsec;
+}
+
+/**
+ * @brief Cast timestamp to standard timespec
+ *
+ * @param t
+ * @return struct timespec
+ */
+static inline struct timespec timestamp2spec(timestamp_t t) {
+    struct timespec ts = {
+        .tv_sec  = t / 1000000000L,
+        .tv_nsec = t % 1000000000L,
+    };
+    return ts;
+}
+
+/**
+ * @brief Monotonic feature
+ *
+ * @param monotonic
+ * @param ms
+ * @return struct timespec
+ */
+static inline timestamp_t feature(bool monotonic, unsigned int ms) { return timestamp(monotonic) + ms * 1000000L; }
+
+#define timestamp_from_ms(ms) ((timestamp_t)(ms) * 1000000L)
+#define timestamp_from_s(s)   ((timestamp_t)(s) * 1000000000L)
+#define timestamp_to_ms(t)    ((t) / 1000000L)
+#define timestamp_to_s(t)     ((t) / 1000000000L)
+
+#endif /* __TIMESTAMP_H */

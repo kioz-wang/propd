@@ -59,28 +59,28 @@ value_t *value_parse(const char *str) {
     case _value_i64: {
         char *endptr = NULL;
         long  number = strtol(value, &endptr, 0);
-        if (endptr == value || (errno == ERANGE && (number == LONG_MAX || number == LONG_MIN))) return NULL;
-        if (type == _value_i32 && (number < INT32_MIN || INT32_MAX < number)) return NULL;
+        if (endptr == value || (errno == ERANGE && (number == LONG_MAX || number == LONG_MIN))) goto exit_inval;
+        if (type == _value_i32 && (number < INT32_MIN || INT32_MAX < number)) goto exit_inval;
         return (type == _value_i32) ? value_i32((int32_t)number) : value_i64((int64_t)number);
     } break;
     case _value_u32:
     case _value_u64: {
         char         *endptr = NULL;
         unsigned long number = strtoul(value, &endptr, 0);
-        if (endptr == value || (errno == ERANGE && number == ULONG_MAX)) return NULL;
-        if (type == _value_u32 && number > UINT32_MAX) return NULL;
+        if (endptr == value || (errno == ERANGE && number == ULONG_MAX)) goto exit_inval;
+        if (type == _value_u32 && number > UINT32_MAX) goto exit_inval;
         return (type == _value_u32) ? value_u32((uint32_t)number) : value_u64((uint64_t)number);
     } break;
     case _value_float: {
         char *endptr = NULL;
         float number = strtof(value, &endptr);
-        if (endptr == value || (errno == ERANGE /* TODO check overflow and underflow */)) return NULL;
+        if (endptr == value || (errno == ERANGE /* TODO check overflow and underflow */)) goto exit_inval;
         return value_float(number);
     } break;
     case _value_double: {
         char  *endptr = NULL;
         double number = strtod(value, &endptr);
-        if (endptr == value || (errno == ERANGE /* TODO check overflow and underflow */)) return NULL;
+        if (endptr == value || (errno == ERANGE /* TODO check overflow and underflow */)) goto exit_inval;
         return value_double(number);
     } break;
     case _value_data: {
@@ -90,7 +90,7 @@ value_t *value_parse(const char *str) {
         void *data = hex2mem(memory, &length, value);
         if (!data) {
             free(memory);
-            return NULL;
+            goto exit_inval;
         }
         value_t *v = value_data(length, data);
         free(memory);
@@ -101,6 +101,8 @@ value_t *value_parse(const char *str) {
     } break;
     }
 
+exit_inval:
+    errno = EINVAL;
     return NULL;
 }
 

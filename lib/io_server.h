@@ -31,7 +31,8 @@
 #ifndef __PROPD_IO_SERVER_H
 #define __PROPD_IO_SERVER_H
 
-#include "timestamp.h"
+#include "infra/timestamp.h"
+#include "io.h"
 #include "value.h"
 #include <linux/limits.h>
 #include <stdint.h>
@@ -57,9 +58,12 @@ typedef struct io_package io_package_t;
  * @brief Start IO server
  *
  * @param name server节点名
+ * @param thread_pool
+ * @param credbook
+ * @param io_ctx
  * @param tid 返回IO server线程id，用于终止；传入NULL时，阻塞等待
- * @return int
+ * @return int errno
  */
-int io_start_server(const char *name, pthread_t *tid);
+int start_io_server(const char *name, void *thread_pool, const void *credbook, const io_ctx_t *io_ctx, pthread_t *tid);
 
 #endif /* __PROPD_IO_SERVER_H */

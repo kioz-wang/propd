@@ -1,9 +1,9 @@
 /**
- * @file bridge.h
+ * @file named_mutex.h
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
- * @date 2025-12-15
+ * @date 2025-12-11
  *
  * @copyright MIT License
  *
@@ -28,19 +28,36 @@
  *  SOFTWARE.
  */
 
-#ifndef __PROPD_BRIDGE_H
-#define __PROPD_BRIDGE_H
+#ifndef __NAMED_MUTEX_H
+#define __NAMED_MUTEX_H
 
-#include "storage.h"
+/**
+ * @brief Create a namespace of named_mutexs
+ *
+ * @return void* 命名互斥锁命名空间对象（On error, return NULL and set errno）
+ */
+void *named_mutex_create_namespace(void);
+/**
+ * @brief Destroy a namespce of named_mutex
+ *
+ * @param ns maybe NULL
+ */
+void named_mutex_destroy_namespace(void *ns);
+/**
+ * @brief Lock a name
+ *
+ * @param ns
+ * @param name
+ * @return int errno (ENOMEM)
+ */
+int named_mutex_lock(void *ns, const char *name);
+/**
+ * @brief Unlock a name
+ *
+ * @param ns
+ * @param name
+ * @return int errno (ENOENT)
+ */
+int named_mutex_unlock(void *ns, const char *name);
 
-int constructor_file(storage_ctx_t *ctx, const char *name, const char *dir);
-int constructor_unix(storage_ctx_t *ctx, const char *name);
-int constructor_memory(storage_ctx_t *ctx, const char *name, long phy, const void *layout);
-int constructor_tcp(storage_ctx_t *ctx, const char *name, const char *ip, unsigned short port);
-
-extern storage_parseConfig_t file_parseConfig;
-extern storage_parseConfig_t unix_parseConfig;
-extern storage_parseConfig_t memory_parseConfig;
-extern storage_parseConfig_t tcp_parseConfig;
-
-#endif /* __PROPD_BRIDGE_H */
+#endif /* __NAMED_MUTEX_H */

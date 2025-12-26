@@ -1,9 +1,9 @@
 /**
- * @file thread_pool.h
+ * @file global.c
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
- * @date 2025-12-03
+ * @date 2025-12-25
  *
  * @copyright MIT License
  *
@@ -28,37 +28,7 @@
  *  SOFTWARE.
  */
 
-#ifndef __THREAD_POOL_H
-#define __THREAD_POOL_H
+#include "global.h"
+#include <stdio.h>
 
-#include <stdbool.h>
-
-/**
- * @brief Allocate and initialize a thread-pool
- *
- * @param thread_num 线程数。传入0时，根据CPU数自动选择
- * @param min_if_auto 自动选择的线程数不能低于此
- * @param max_if_auto 自动选择的线程数不能高于此
- * @param task_num 任务队列长度。传入0时，等于线程数
- * @return void* 线程池对象
- */
-void *thread_pool_create(unsigned short thread_num, unsigned short min_if_auto, unsigned short max_if_auto,
-                         unsigned short task_num);
-/**
- * @brief Release a thread-pool, cancel all threads
- *
- * @param tpool 线程池对象
- */
-void thread_pool_destroy(void *tpool);
-/**
- * @brief Submit a task
- *
- * @param tpool 线程池对象
- * @param routine
- * @param arg
- * @param sync
- * @return int 当sync为true时，同步等待routine执行完毕并返回其返回值；否则始终返回0
- */
-int thread_pool_submit(void *tpool, int (*routine)(void *), void *arg, bool sync);
-
-#endif /* __THREAD_POOL_H */
+const char *g_at = "/tmp";
