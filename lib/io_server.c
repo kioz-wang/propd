@@ -78,6 +78,7 @@ static int get(const worker_arg_t *arg, int connfd, const char *key) {
         n = send(connfd, value, sizeof(value_t) + value->length, 0);
         assert(n == sizeof(value_t) + value->length); /* TODO pthread_exit */
         logfD(logFmtHead logFmtKey " >>>%d send value with type %d length %d", key, connfd, value->type, value->length);
+        free((void *)value);
     } else {
         value_t undef = {.type = _value_undef, .length = 0};
         n             = send(connfd, &undef, sizeof(undef), 0);

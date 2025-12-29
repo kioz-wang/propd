@@ -3,7 +3,8 @@
 
 # 编译器设置
 CC ?= gcc
-CFLAGS ?= -std=gnu11 -Wall -Wextra -g
+CFLAGS ?= -std=gnu11 -Wall -Wextra \
+	-g -O0
 
 # 目录
 BIN_SRC_DIR = .
@@ -19,7 +20,8 @@ LIB_TARGET ?= $(BUILD_DIR)/lib/libpropd.so
 LIB_DIR ?= $(BUILD_DIR)/lib
 
 # 链接选项
-LDFLAGS = -L$(LIB_DIR) -lpropd -Wl,-rpath -Wl,$(realpath $(LIB_DIR))
+# SANFLAGS = -fsanitize=address -fsanitize-address-use-after-scope
+LDFLAGS = -L$(LIB_DIR) -lpropd -Wl,-rpath -Wl,$(realpath $(LIB_DIR)) $(SANFLAGS)
 
 # 递归查找所有源文件
 PROP_SRCS = $(shell find prop -name '*.c' 2>/dev/null | sort)

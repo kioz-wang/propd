@@ -3,7 +3,8 @@
 
 # 编译器设置
 CC ?= gcc
-CFLAGS ?= -std=gnu11 -Wall -Wextra -fPIC -DMLOGGER_COLOR -DMLOGGER_TIMESTAMP -DMLOGGER_LEVEL -g
+CFLAGS ?= -std=gnu11 -Wall -Wextra -fPIC -DMLOGGER_COLOR -DMLOGGER_TIMESTAMP -DMLOGGER_LEVEL \
+	-g -O0
 
 # 目录
 LIB_SRC_DIR = .
@@ -22,7 +23,8 @@ OBJS = $(SRCS:%.c=$(OBJ_DIR)/%.o)
 TARGET = $(LIB_DIR)/libpropd.so
 
 # 库编译选项
-LDFLAGS = -shared -pthread
+# SANFLAGS = -fsanitize=address -fsanitize-address-use-after-scope
+LDFLAGS = -shared -pthread $(SANFLAGS)
 LIBS = -lcjson
 
 # 包含路径

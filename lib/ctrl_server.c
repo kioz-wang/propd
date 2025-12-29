@@ -78,7 +78,7 @@ static int register_child(const io_ctx_t *io_ctx, const ctrl_package_register_ch
         return EINVAL;
     }
 
-    if (constructor_unix(&storage, storage_unix_temp,child->name)) {
+    if (constructor_unix(&storage, storage_unix_temp, child->name)) {
         logfE(logFmtHead "register child %s but" logFmtErrno, child->name, logArgErrno);
         return errno;
     }
@@ -213,7 +213,7 @@ static void *server(ctx_t *ctx) {
         }
         struct sockaddr_un cliaddr = {0};
 
-        worker_arg_t *arg = (worker_arg_t *)malloc(sizeof(worker_arg_t));
+        worker_arg_t *arg = malloc(sizeof(worker_arg_t));
         if (!arg) {
             logfE(logFmtHead "fail to allocate ctrl_worker_arg" logFmtErrno, logArgErrno);
             free(pkg);
@@ -224,6 +224,7 @@ static void *server(ctx_t *ctx) {
             recvfrom(ctx->sockfd, pkg, pkg_length, 0, (struct sockaddr *)&cliaddr, &(socklen_t){sizeof(cliaddr)});
         if (n == -1) {
             logfE(logFmtHead "fail to recv package" logFmtErrno, logArgErrno);
+            free(arg);
             free(pkg);
             break;
         }
