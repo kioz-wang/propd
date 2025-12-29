@@ -1,5 +1,5 @@
 /**
- * @file timestamp.h
+ * @file thread_pool.h
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
@@ -28,57 +28,37 @@
  *  SOFTWARE.
  */
 
-#ifndef __PROPD_TIMESTAMP_H
-#define __PROPD_TIMESTAMP_H
+#ifndef __THREAD_POOL_H
+#define __THREAD_POOL_H
 
 #include <stdbool.h>
-#include <stdint.h>
-#include <time.h>
 
 /**
- * @brief unit: nano second
+ * @brief Allocate and initialize a thread-pool
  *
+ * @param thread_num 线程数。传入0时，根据CPU数自动选择
+ * @param min_if_auto 自动选择的线程数不能低于此
+ * @param max_if_auto 自动选择的线程数不能高于此
+ * @param task_num 任务队列长度。传入0时，等于线程数
+ * @return void* 线程池对象（On error, return NULL and set errno）
  */
-typedef int64_t timestamp_t;
-
+void *thread_pool_create(unsigned short thread_num, unsigned short min_if_auto, unsigned short max_if_auto,
+                         unsigned short task_num);
 /**
- * @brief Monotonic timestamp
+ * @brief Release a thread-pool, cancel all threads
  *
- * @param monotonic
- * @return timestamp_t
+ * @param tpool 线程池对象
  */
-static inline timestamp_t timestamp(bool monotonic) {
-    struct timespec ts;
-    clock_gettime(monotonic ? CLOCK_MONOTONIC : CLOCK_REALTIME, &ts);
-    return ts.tv_sec * 1000000000L + ts.tv_nsec;
-}
-
+void thread_pool_destroy(void *tpool);
 /**
- * @brief Cast timestamp to standard timespec
+ * @brief Submit a task
  *
- * @param t
- * @return struct timespec
+ * @param tpool 线程池对象
+ * @param routine
+ * @param arg
+ * @param sync
+ * @return int 当sync为true时，同步等待routine执行完毕并返回其返回值；否则始终返回0
  */
-static inline struct timespec timestamp2spec(timestamp_t t) {
-    struct timespec ts = {
-        .tv_sec  = t / 1000000000L,
-        .tv_nsec = t % 1000000000L,
-    };
-    return ts;
-}
+int thread_pool_submit(void *tpool, int (*routine)(void *), void *arg, bool sync);
 
-/**
- * @brief Monotonic feature
- *
- * @param monotonic
- * @param ms
- * @return struct timespec
- */
-static inline timestamp_t feature(bool monotonic, unsigned int ms) { return timestamp(monotonic) + ms * 1000000L; }
-
-#define timestamp_from_ms(ms) ((timestamp_t)(ms) * 1000000L)
-#define timestamp_from_s(s)   ((timestamp_t)(s) * 1000000000L)
-#define timestamp_to_ms(t)    ((t) / 1000000L)
-#define timestamp_to_s(t)     ((t) / 1000000000L)
-
-#endif /* __PROPD_TIMESTAMP_H */
+#endif /* __THREAD_POOL_H */

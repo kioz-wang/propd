@@ -30,32 +30,41 @@
 
 #define _GNU_SOURCE
 #include "misc.h"
-#include "timestamp.h"
+#include "infra/timestamp.h"
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/random.h>
 #include <unistd.h>
 
-void random_alphabet(char *addr, size_t length, bool upper) {
-    unsigned int seed = (unsigned int)timestamp(false);
+void random_alnum(char *addr, size_t length) {
+    unsigned int seed;
+    if (getrandom(&seed, sizeof(seed), GRND_NONBLOCK) != sizeof(seed)) {
+        seed = (unsigned int)timestamp(false) ^ getpid() ^ gettid();
+    }
     for (size_t i = 0; i < length; i++) {
-        addr[i] = (upper ? 'A' : 'a') + (rand_r(&seed) + getpid() + gettid()) % 26;
+        int  ci = rand_r(&seed) % (26 * 2 + 10);
+        char c;
+        if (ci >= 26 * 2) c = '0' + ci - 26 * 2;
+        else if (ci >= 26) c = 'a' + ci - 26;
+        else c = 'A' + ci;
+        addr[i] = c;
     }
 }
 
-const char **arraydup_cstring(const char **array, size_t length) {
+const char **arraydup_cstring(const char **array, int num) {
     if (array) {
-        if (!length)
-            while (array[length])
-                length++;
+        if (!num)
+            while (array[num])
+                num++;
     } else {
-        length = 0;
+        num = 0;
     }
-    const char **dup = (const char **)calloc(length + 1, sizeof(char *));
+    const char **dup = (const char **)calloc(num + 1, sizeof(char *));
     if (!dup) return NULL;
-    for (size_t i = 0; i < length; i++) {
+    for (int i = 0; i < num; i++) {
         dup[i] = strdup(array[i]);
         if (!dup[i]) {
             arrayfree_cstring(dup);
@@ -74,30 +83,24 @@ void arrayfree_cstring(const char **array) {
     }
 }
 
-const char **arrayparse_cstring(const char *s, size_t *_length) {
+const char **arrayparse_cstring(const char *s, int *_num) {
     char *_s = strdup(s);
     if (!_s) return NULL;
 
-    size_t length = 0;
-    char  *w1     = _s;
-    char  *w2     = _s;
+    int   num = 0;
+    char *w1  = _s;
+    char *w2  = _s;
 
     while (*w2) {
         if (*w2 == ',') {
-            if (w2 == w1) {
-                errno = EINVAL;
-                return NULL;
-            }
-            length++;
+            num++;
             w1 = w2 + 1;
         }
         w2++;
     }
-    if (w2 > w1) {
-        length++;
-    }
+    if (w2 != _s) num++;
 
-    const char **array = (const char **)calloc(length, sizeof(char *));
+    const char **array = (const char **)calloc(num, sizeof(char *));
     if (!array) {
         free(_s);
         return NULL;
@@ -114,15 +117,30 @@ const char **arrayparse_cstring(const char *s, size_t *_length) {
         }
         w2++;
     }
-    if (w2 > w1) {
-        array[i] = w1;
-    }
+    if (w2 != _s) array[i] = w1;
 
-    const char **dup = arraydup_cstring(array, length);
+    const char **dup = arraydup_cstring(array, num);
     free(array);
     free(_s);
-    if (dup && _length) *_length = length;
+    if (dup && _num) *_num = num;
     return dup;
+}
+
+const char *arrayfmt_cstring(char *buffer, size_t length, const char **array) {
+    assert(array);
+    assert(length > 3);
+    int pos = 0;
+
+    for (int i = 0; array[i]; i++) {
+        int n = snprintf(&buffer[pos], length - pos, "%s,", array[i]);
+        if (n < 0 || n >= (int)length - pos) {
+            memset(&buffer[length - 1 - 3], '.', 3);
+            return buffer;
+        }
+        pos += n;
+    }
+    buffer[pos - 1] = '\0';
+    return buffer;
 }
 
 static inline uint8_t dec2hexchar(uint8_t dec, bool upper) {
@@ -136,14 +154,15 @@ static inline uint8_t hexchar2dec(uint8_t hexchar) {
 }
 
 const char *hexmem(char *buffer, size_t b, void *memory, size_t m, bool upper) {
-    assert(buffer && b);
+    assert(buffer);
+    assert(b);
 
     if (!memory || !m) {
         buffer[0] = '\0';
         return buffer;
     }
 
-    buffer[b--] = '\0';
+    buffer[--b] = '\0';
     char *ptr   = buffer;
 
     size_t c /* capacity */ = b / 2;
@@ -153,6 +172,7 @@ const char *hexmem(char *buffer, size_t b, void *memory, size_t m, bool upper) {
             *ptr++ = dec2hexchar(((uint8_t *)memory)[i] >> 4, upper);
             *ptr++ = dec2hexchar(((uint8_t *)memory)[i] & 0xf, upper);
         }
+        *ptr = '\0';
         return buffer;
     }
 
@@ -211,8 +231,14 @@ bool prefix_match(const char *prefix, const char *str) {
     return c1 == '*';
 }
 
-void dotwait(char c, int unit, int n) {
-    assert(unit && n);
+void attach_wait(const char *envname, char c, int unit) {
+    const char *n_str = getenv(envname ? envname : "ATTACH_WAIT");
+    if (!n_str) return;
+
+    int n = strtoul(n_str, NULL, 0);
+    if (!n) return;
+
+    assert(unit);
     int b = 0;
     fputc('\n', stderr);
     do {
@@ -224,3 +250,45 @@ void dotwait(char c, int unit, int n) {
     } while (--n);
     fputc('\n', stderr);
 }
+
+#ifdef __TEST_MISC
+
+#include <ctype.h>
+static void TEST_random_alnum(void) {
+    char buffer[64];
+    random_alnum(buffer, sizeof(buffer));
+    fprintf(stderr, "%*s\n", (int)sizeof(buffer), buffer);
+    for (size_t i = 0; i < sizeof(buffer); i++)
+        assert(isalnum(buffer[i]));
+}
+
+static void TEST_cstring_array(void) {
+    char         buffer0[64];
+    char         buffer1[sizeof(buffer0)];
+    const char  *cstring[] = {"hello", "world", "", "abc,def", "", NULL};
+    const char **dup0      = arraydup_cstring(cstring, sizeof(cstring) / sizeof(cstring[0]) - 1);
+    const char **dup1      = arraydup_cstring(cstring, 0);
+    const char  *formated  = arrayfmt_cstring(buffer0, sizeof(buffer0), dup0);
+    arrayfmt_cstring(buffer1, sizeof(buffer1), dup1);
+    fprintf(stderr, "%s\n", formated);
+    assert(!strncmp(buffer0, buffer1, sizeof(buffer0)));
+    arrayfree_cstring(dup0);
+    arrayfree_cstring(dup1);
+    int          num    = 0;
+    const char **parsed = arrayparse_cstring(buffer0, &num);
+    assert(num == 6);
+    arrayfmt_cstring(buffer1, sizeof(buffer1), parsed);
+    assert(!strncmp(buffer0, buffer1, sizeof(buffer0)));
+    arrayfmt_cstring(buffer1, 10, parsed);
+    assert(!strncmp("hello,...", buffer1, sizeof(buffer0)));
+    arrayfree_cstring(parsed);
+}
+
+int main(int argc, char *argv[]) {
+    for (int i = 0; i < 100; i++)
+        TEST_random_alnum();
+
+    TEST_cstring_array();
+}
+
+#endif /* __TEST_MISC */

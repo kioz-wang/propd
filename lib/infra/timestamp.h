@@ -1,9 +1,9 @@
 /**
- * @file main.c
+ * @file timestamp.h
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
- * @date 2025-12-15
+ * @date 2025-12-03
  *
  * @copyright MIT License
  *
@@ -28,21 +28,57 @@
  *  SOFTWARE.
  */
 
-#include "builtin/builtin.h"
-#include "propd.h"
+#ifndef __TIMESTAMP_H
+#define __TIMESTAMP_H
 
-int main(int argc, char *argv[]) {
-    propd_config_t config;
+#include <stdbool.h>
+#include <stdint.h>
+#include <time.h>
 
-    propd_config_default(&config);
+/**
+ * @brief unit: nano second
+ *
+ */
+typedef int64_t timestamp_t;
 
-    propd_config_apply_parser(&config, &file_parseConfig);
-    propd_config_apply_parser(&config, &unix_parseConfig);
-
-    propd_config_parse(&config, argc, argv);
-
-    /* TODO register some local storage by code if you want */
-    // int ret = propd_register(storage, "node_name", 0, NULL);
-
-    return propd_run(&config);
+/**
+ * @brief Monotonic timestamp
+ *
+ * @param monotonic
+ * @return timestamp_t
+ */
+static inline timestamp_t timestamp(bool monotonic) {
+    struct timespec ts;
+    clock_gettime(monotonic ? CLOCK_MONOTONIC : CLOCK_REALTIME, &ts);
+    return ts.tv_sec * 1000000000L + ts.tv_nsec;
 }
+
+/**
+ * @brief Cast timestamp to standard timespec
+ *
+ * @param t
+ * @return struct timespec
+ */
+static inline struct timespec timestamp2spec(timestamp_t t) {
+    struct timespec ts = {
+        .tv_sec  = t / 1000000000L,
+        .tv_nsec = t % 1000000000L,
+    };
+    return ts;
+}
+
+/**
+ * @brief Monotonic feature
+ *
+ * @param monotonic
+ * @param ms
+ * @return struct timespec
+ */
+static inline timestamp_t feature(bool monotonic, unsigned int ms) { return timestamp(monotonic) + ms * 1000000L; }
+
+#define timestamp_from_ms(ms) ((timestamp_t)(ms) * 1000000L)
+#define timestamp_from_s(s)   ((timestamp_t)(s) * 1000000000L)
+#define timestamp_to_ms(t)    ((t) / 1000000L)
+#define timestamp_to_s(t)     ((t) / 1000000000L)
+
+#endif /* __TIMESTAMP_H */

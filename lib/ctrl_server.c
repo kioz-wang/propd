@@ -29,12 +29,14 @@
  */
 
 #include "ctrl_server.h"
+#include "builtin/builtin.h"
 #include "global.h"
-#include "io/bridge.h"
+#include "infra/thread_pool.h"
+#include "io.h"
 #include "logger/logger.h"
 #include "misc.h"
-#include "named_mutex.h"
-#include "thread_pool.h"
+#include "route.h"
+#include "storage.h"
 #include <assert.h>
 #include <errno.h>
 #include <pthread.h>
@@ -47,55 +49,54 @@
 #include <sys/un.h>
 #include <unistd.h>
 
-#define logFmtHead "[server@ctrl] "
+#define logFmtHead "[server::ctrl] "
 
-static int register_child(const ctrl_package_register_child_t *child) {
-    int  ret = 0;
-    io_t io;
+struct worker_arg {
+    const io_ctx_t       *io_ctx;
+    const char           *name;
+    const char          **cache_now;
+    const char          **prefix;
+    const ctrl_package_t *package; /* own */
+    int                   sockfd;
+    struct sockaddr_un    cliaddr;
+};
+typedef struct worker_arg worker_arg_t;
+
+/**
+ * @brief
+ *
+ * @param io_ctx
+ * @param child
+ * @return int errno
+ */
+static int register_child(const io_ctx_t *io_ctx, const ctrl_package_register_child_t *child) {
+    int           ret     = 0;
+    storage_ctx_t storage = {0};
 
     if (!child->num_cache_now && !child->num_prefix) {
-        logfE(logFmtHead "deny to register empty child");
-        return -1;
+        logfE(logFmtHead "deny to register empty child %s", child->name);
+        return EINVAL;
     }
 
-    io = bridge_unix(child->name);
-    if (bridge_is_bad(&io)) {
-        return -1;
+    if (constructor_unix(&storage, child->name)) {
+        logfE(logFmtHead "register child %s but" logFmtErrno, child->name, logArgErrno);
+        return errno;
     }
-    pthread_cleanup_push((void (*)(void *))io_deinit, &io);
+    pthread_cleanup_push((void (*)(void *))storage_destructor, &storage);
 
     for (uint32_t i = 0; i < child->num_cache_now; i++) {
-        const value_t *value;
-        timestamp_t    duration;
-        const char    *key = child->cache_now_then_prefix[i];
-
-        ret = named_mutex_lock(g_nmtx_ns, key);
-        if (ret) {
-            logfE(logFmtHead "fail to lock name" logFmtRet, ret);
-            break;
-        }
-        ret = io_get(&io, key, &value, &duration);
-        if (ret) {
-            logfE(logFmtHead "fail to get %s" logFmtRet, key, ret);
-        } else {
-            ret = cache_set(g_cache, key, value, duration);
-            if (ret) {
-                logfE(logFmtHead "fail to cache %s" logFmtRet, key, ret);
-            }
-        }
-        named_mutex_unlock(g_nmtx_ns, key);
+        ret = io_update(io_ctx, child->cache_now_then_prefix[i], &storage);
         if (ret) break;
     }
 
     if (!ret && child->num_prefix) {
         const char **prefix = (const char **)calloc(child->num_prefix, sizeof(char *));
-        if (prefix) {
+        if (!prefix) ret = errno;
+        else {
             for (uint32_t i = 0; i < child->num_prefix; i++)
                 prefix[i] = child->cache_now_then_prefix[child->num_cache_now + i];
-            ret = route_register(g_route, io, child->name, child->num_prefix, prefix);
+            ret = route_register(io_ctx->route, &storage, child->num_prefix, prefix);
             free(prefix);
-        } else {
-            ret = -1;
         }
     }
 
@@ -103,60 +104,57 @@ static int register_child(const ctrl_package_register_child_t *child) {
     return ret;
 }
 
-static int unregister_child(const char *name) {
+/**
+ * @brief
+ *
+ * @param io_ctx
+ * @param name
+ * @return int errno
+ */
+static int unregister_child(const io_ctx_t *io_ctx, const char *name) {
     int ret = 0;
 
     if (name[0]) {
-        ret = route_unregister(g_route, name);
+        ret = route_unregister(io_ctx->route, name);
     } else {
-        while (!route_unregister(g_route, NULL))
+        while (!route_unregister(io_ctx->route, NULL))
             ;
     }
     return ret;
 }
 
-static int dump_db_route(int sockfd, struct sockaddr_un *cliaddr) {
+static int dump_db_route(int sockfd, const struct sockaddr_un *cliaddr) {
     int ret = -1;
     /* TODO */
     return ret;
 }
 
-static int dump_db_cache(int sockfd, struct sockaddr_un *cliaddr) {
+static int dump_db_cache(int sockfd, const struct sockaddr_un *cliaddr) {
     int ret = -1;
     /* TODO */
     return ret;
 }
 
-struct ctrl_worker_arg {
-    const char           *name;
-    const char          **cache_now;
-    const char          **prefix;
-    const ctrl_package_t *package;
-    int                   sockfd;
-    struct sockaddr_un    cliaddr;
-};
-typedef struct ctrl_worker_arg ctrl_worker_arg_t;
-
-typedef ctrl_worker_arg_t ctrl_worker_cleanup_ctx_t;
-static void               ctrl_worker_cleanup(ctrl_worker_cleanup_ctx_t *ctx) {
-    free((void *)ctx->package);
-    free(ctx);
+static void worker_cleanup(worker_arg_t *arg) {
+    logfD(logFmtHead "cleanup worker");
+    free((void *)arg->package);
+    free(arg);
 }
 
-static int ctrl_worker(ctrl_worker_arg_t *arg) {
+static int worker(worker_arg_t *arg) {
     int ret = 0;
 
-    pthread_cleanup_push((void (*)(void *))ctrl_worker_cleanup, arg);
+    pthread_cleanup_push((void (*)(void *))worker_cleanup, arg);
 
     switch (arg->package->type) {
     case _ctrl_register_child: {
-        ret = register_child(&arg->package->child);
+        ret = register_child(arg->io_ctx, &arg->package->child);
     } break;
     case _ctrl_register_parent: {
         ret = ctrl_register_child(arg->package->name, arg->name, arg->cache_now, arg->prefix);
     } break;
     case _ctrl_unregister_child: {
-        ret = unregister_child(arg->package->name);
+        ret = unregister_child(arg->io_ctx, arg->package->name);
     } break;
     case _ctrl_unregister_parent: {
         ret = ctrl_unregister_child(arg->package->name, arg->name);
@@ -181,39 +179,49 @@ exit:
     return ret;
 }
 
-struct ctrl_server_arg {
-    const char        *name;
-    uint32_t           num_prefix_max; /* as parent, limits recv buffer */
-    const char       **cache_now;      /* as child */
-    const char       **prefix;         /* as child */
-    struct sockaddr_un servaddr;
-    int                listenfd;
+struct ctx {
+    void              *thread_pool;
+    const io_ctx_t    *io_ctx;
+    const char        *name;           /* own */
+    const char       **cache_now;      /* own, as child */
+    const char       **prefix;         /* own, as child */
+    uint32_t           num_prefix_max; /* own, as parent, limits recv buffer */
+    int                sockfd;         /* own */
+    struct sockaddr_un servaddr;       /* own */
 };
-typedef struct ctrl_server_arg ctrl_server_arg_t;
+typedef struct ctx ctx_t;
 
-static void ctrl_server_cleanup(ctrl_server_arg_t *arg) {
-    unlink(arg->servaddr.sun_path);
-    close(arg->listenfd);
-    arrayfree_cstring(arg->prefix);
-    arrayfree_cstring(arg->cache_now);
-    free((void *)arg->name);
-    free(arg);
+static void server_cleanup(ctx_t *ctx) {
+    logfD(logFmtHead "cleanup server");
+    unlink(ctx->servaddr.sun_path);
+    close(ctx->sockfd);
+    arrayfree_cstring(ctx->prefix);
+    arrayfree_cstring(ctx->cache_now);
+    free((void *)ctx->name);
+    free(ctx);
 }
 
-static void *ctrl_server(ctrl_server_arg_t *arg) {
-    pthread_cleanup_push((void (*)(void *))ctrl_server_cleanup, arg);
+static void *server(ctx_t *ctx) {
+    pthread_cleanup_push((void (*)(void *))server_cleanup, ctx);
 
+    size_t pkg_length = sizeof(ctrl_package_t) + ctx->num_prefix_max * NAME_MAX;
     do {
-        size_t          pkg_length = sizeof(ctrl_package_t) + arg->num_prefix_max * NAME_MAX;
-        ctrl_package_t *pkg        = (ctrl_package_t *)malloc(pkg_length);
+        ctrl_package_t *pkg = malloc(pkg_length);
         if (!pkg) {
             logfE(logFmtHead "fail to allocate package" logFmtErrno, logArgErrno);
             break;
         }
         struct sockaddr_un cliaddr = {0};
 
+        worker_arg_t *arg = (worker_arg_t *)malloc(sizeof(worker_arg_t));
+        if (!arg) {
+            logfE(logFmtHead "fail to allocate ctrl_worker_arg" logFmtErrno, logArgErrno);
+            free(pkg);
+            break;
+        }
+
         ssize_t n =
-            recvfrom(arg->listenfd, pkg, pkg_length, 0, (struct sockaddr *)&cliaddr, &(socklen_t){sizeof(cliaddr)});
+            recvfrom(ctx->sockfd, pkg, pkg_length, 0, (struct sockaddr *)&cliaddr, &(socklen_t){sizeof(cliaddr)});
         if (n == -1) {
             logfE(logFmtHead "fail to recv package" logFmtErrno, logArgErrno);
             free(pkg);
@@ -221,54 +229,49 @@ static void *ctrl_server(ctrl_server_arg_t *arg) {
         }
         logfD(logFmtHead "recv package with length %ld", n);
 
-        ctrl_worker_arg_t *ctrl_worker_arg = (ctrl_worker_arg_t *)malloc(sizeof(ctrl_worker_arg_t));
-        if (!ctrl_worker_arg) {
-            logfE(logFmtHead "fail to allocate ctrl_worker_arg" logFmtErrno, logArgErrno);
-            free(pkg);
-            break;
-        }
-        ctrl_worker_arg->name      = arg->name;
-        ctrl_worker_arg->cache_now = arg->cache_now;
-        ctrl_worker_arg->prefix    = arg->prefix;
-        ctrl_worker_arg->package   = pkg; /* take ownership */
-        ctrl_worker_arg->sockfd    = arg->listenfd;
-        ctrl_worker_arg->cliaddr   = cliaddr;
+        arg->io_ctx    = ctx->io_ctx;
+        arg->name      = ctx->name;
+        arg->cache_now = ctx->cache_now;
+        arg->prefix    = ctx->prefix;
+        arg->package   = pkg; /* take ownership */
+        arg->sockfd    = ctx->sockfd;
+        arg->cliaddr   = cliaddr;
 
-        thread_pool_submit(g_pool, (int (*)(void *))ctrl_worker, ctrl_worker_arg, false);
+        thread_pool_submit(ctx->thread_pool, (int (*)(void *))worker, arg, false);
     } while (true);
 
     pthread_cleanup_pop(true);
     return NULL;
 }
 
-int ctrl_start_server(const char *name, uint32_t num_prefix_max, const char *cache_now[], const char *prefix[],
-                      pthread_t *tid) {
-    int                ret = 0;
-    ctrl_server_arg_t *arg = (ctrl_server_arg_t *)calloc(1, sizeof(ctrl_server_arg_t));
-    if (!arg) return errno;
+int start_ctrl_server(const char *name, void *thread_pool, const io_ctx_t *io_ctx, const char *cache_now[],
+                      const char *prefix[], uint32_t num_prefix_max, pthread_t *tid) {
+    int    ret = 0;
+    ctx_t *ctx = calloc(1, sizeof(ctx_t));
+    if (!ctx) return errno;
 
-    arg->name = strdup(name);
-    if (!arg->name) goto exit_ctx;
+    ctx->thread_pool = thread_pool;
+    ctx->io_ctx      = io_ctx;
 
-    arg->num_prefix_max = num_prefix_max;
+    ctx->name = strdup(name);
+    if (!ctx->name) goto exit_ctx;
+    ctx->cache_now = arraydup_cstring(cache_now, 0);
+    if (!ctx->cache_now) goto exit_ctx;
+    ctx->prefix = arraydup_cstring(prefix, 0);
+    if (!ctx->prefix) goto exit_ctx;
+    ctx->num_prefix_max = num_prefix_max;
 
-    arg->cache_now = arraydup_cstring(cache_now, 0);
-    if (!arg->cache_now) goto exit_ctx;
-
-    arg->prefix = arraydup_cstring(prefix, 0);
-    if (!arg->prefix) goto exit_ctx;
-
-    arg->listenfd = socket(AF_LOCAL, SOCK_DGRAM, 0);
-    if (arg->listenfd == -1) {
+    ctx->sockfd = socket(AF_LOCAL, SOCK_DGRAM, 0);
+    if (ctx->sockfd == -1) {
         logfE(logFmtHead "fail to get socket" logFmtErrno, logArgErrno);
         goto exit_ctx;
     }
 
-    struct sockaddr_un *servaddr = &arg->servaddr;
+    struct sockaddr_un *servaddr = &ctx->servaddr;
     bzero(servaddr, sizeof(struct sockaddr_un));
     servaddr->sun_family = AF_LOCAL;
     snprintf(servaddr->sun_path, sizeof(servaddr->sun_path), PathFmt_CtrlServer, g_at, name);
-    ret = bind(arg->listenfd, (const struct sockaddr *)servaddr, sizeof(*servaddr));
+    ret = bind(ctx->sockfd, (const struct sockaddr *)servaddr, sizeof(*servaddr));
     if (ret) {
         logfE(logFmtHead "fail to bind %s" logFmtErrno, servaddr->sun_path, logArgErrno);
         goto exit_listenfd;
@@ -276,7 +279,7 @@ int ctrl_start_server(const char *name, uint32_t num_prefix_max, const char *cac
     logfI(logFmtHead "bind %s", servaddr->sun_path);
 
     pthread_t _tid;
-    ret = pthread_create(&_tid, NULL, (void *(*)(void *))ctrl_server, arg);
+    ret = pthread_create(&_tid, NULL, (void *(*)(void *))server, ctx);
     if (ret) {
         logfE(logFmtHead "fail to pthread_create" logFmtRet, ret);
         errno = ret;
@@ -292,13 +295,13 @@ int ctrl_start_server(const char *name, uint32_t num_prefix_max, const char *cac
     return 0;
 
 exit_sun_path:
-    unlink(arg->servaddr.sun_path);
+    unlink(ctx->servaddr.sun_path);
 exit_listenfd:
-    close(arg->listenfd);
+    close(ctx->sockfd);
 exit_ctx:
-    arrayfree_cstring(arg->prefix);
-    arrayfree_cstring(arg->cache_now);
-    free((void *)arg->name);
-    free(arg);
+    arrayfree_cstring(ctx->prefix);
+    arrayfree_cstring(ctx->cache_now);
+    free((void *)ctx->name);
+    free(ctx);
     return errno;
 }

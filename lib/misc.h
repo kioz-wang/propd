@@ -34,16 +34,16 @@
 #include <stdbool.h>
 #include <sys/types.h>
 
-void random_alphabet(char *addr, size_t length, bool upper);
+void random_alnum(char *addr, size_t length);
 
 /**
  * @brief Duplicate a cstring's array that maybe terminated with NULL
  *
  * @param array （可以传入NULL）
- * @param length 当array为NULL时无意义；否则若为0，预期array以NULL终止并以此确定length值
+ * @param num 当array为NULL时无意义；否则若为0，预期array以NULL终止并以此确定num值
  * @return const char**
  */
-const char **arraydup_cstring(const char **array, size_t length);
+const char **arraydup_cstring(const char **array, int num);
 /**
  * @brief Release a cstring's array that terminated with NULL
  *
@@ -53,11 +53,20 @@ void arrayfree_cstring(const char **array);
 /**
  * @brief Parse and allocate a cstring's array
  *
- * @param s 以逗号隔开的字符串列表（`([^,]+,)*[^,]+`）
- * @param length 返回解析出的字符串数量（可以传入NULL）
+ * @param s 以逗号隔开的字符串列表
+ * @param num 返回解析出的字符串数量（可以传入NULL）
  * @return const char**
  */
-const char **arrayparse_cstring(const char *s, size_t *length);
+const char **arrayparse_cstring(const char *s, int *num);
+/**
+ * @brief Format a cstring's array (Only for logging, due to potential truncation)
+ *
+ * @param buffer
+ * @param length
+ * @param array
+ * @return const char* Always return a pointer to buffer
+ */
+const char *arrayfmt_cstring(char *buffer, size_t length, const char **array);
 
 /**
  * @brief Hexdump memory into buffer (use '.' to replace middle that too long to dump)
@@ -82,6 +91,13 @@ void *hex2mem(void *addr, size_t *len, const char *str);
 
 bool prefix_match(const char *prefix, const char *str);
 
-void dotwait(char c, int unit, int n);
+/**
+ * @brief
+ *
+ * @param envname How many times (ATTACH_WAIT=0 default)
+ * @param c putc
+ * @param unit sleep how long each time
+ */
+void attach_wait(const char *envname, char c, int unit);
 
 #endif /* __PROPD_MISC_H */

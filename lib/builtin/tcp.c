@@ -1,9 +1,9 @@
 /**
- * @file named_mutex.h
+ * @file tcp.c
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
- * @date 2025-12-11
+ * @date 2025-12-15
  *
  * @copyright MIT License
  *
@@ -28,36 +28,44 @@
  *  SOFTWARE.
  */
 
-#ifndef __NAMED_MUTEX_H
-#define __NAMED_MUTEX_H
+#include "builtin.h"
+#include "global.h"
+#include "logger/logger.h"
+#include <errno.h>
 
-/**
- * @brief Create a namespace of named_mutexs
- *
- * @return void*
- */
-void *named_mutex_create_namespace(void);
-/**
- * @brief Destroy a namespce of named_mutex
- *
- * @param ns
- */
-void named_mutex_destroy_namespace(void *ns);
-/**
- * @brief Lock a name
- *
- * @param ns
- * @param name
- * @return int ENOMEM
- */
-int named_mutex_lock(void *ns, const char *name);
-/**
- * @brief Unlock a name
- *
- * @param ns
- * @param name
- * @return int ENOENT
- */
-int named_mutex_unlock(void *ns, const char *name);
+#define logFmtHead "[storage::(tcp)] "
 
-#endif /* __NAMED_MUTEX_H */
+struct priv {
+    /* TODO */;
+};
+typedef struct priv priv_t;
+
+int constructor_tcp(storage_ctx_t *ctx, const char *name, const char *ip, unsigned short port) {
+    if (!(ctx->name = strdup(name))) {
+        logfE(logFmtHead "fail to allocate name" logFmtErrno, logArgErrno);
+        return errno;
+    }
+
+    priv_t *priv = (priv_t *)malloc(sizeof(priv_t));
+    if (!priv) {
+        logfE(logFmtHead "fail to allocate priv" logFmtErrno, logArgErrno);
+        return errno;
+    }
+
+    ctx->priv       = priv;
+    ctx->destructor = free;
+    return EOPNOTSUPP;
+}
+
+static int parse(storage_ctx_t *ctx, const char *name, const char **args) {
+    unsigned short port = strtoul(args[1], NULL, 0);
+    return constructor_tcp(ctx, name, args[0], port);
+}
+
+storage_parseConfig_t tcp_parseConfig = {
+    .name    = "tcp",
+    .argName = "<IP>,<PORT>,",
+    .note    = "注册类型为tcp的本地IO。IP，PORT是tcp IO需要连接的目标",
+    .argNum  = 2,
+    .parse   = parse,
+};

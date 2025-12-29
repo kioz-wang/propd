@@ -1,9 +1,9 @@
 /**
- * @file global.h
+ * @file named_mutex.h
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
- * @date 2025-12-04
+ * @date 2025-12-11
  *
  * @copyright MIT License
  *
@@ -28,21 +28,36 @@
  *  SOFTWARE.
  */
 
-#ifndef __PROPD_GLOBAL_H
-#define __PROPD_GLOBAL_H
+#ifndef __NAMED_MUTEX_H
+#define __NAMED_MUTEX_H
 
-extern const char *g_at;
+/**
+ * @brief Create a namespace of named_mutexs
+ *
+ * @return void* 命名互斥锁命名空间对象（On error, return NULL and set errno）
+ */
+void *named_mutex_create_namespace(void);
+/**
+ * @brief Destroy a namespce of named_mutex
+ *
+ * @param ns maybe NULL
+ */
+void named_mutex_destroy_namespace(void *ns);
+/**
+ * @brief Lock a name
+ *
+ * @param ns
+ * @param name
+ * @return int errno (ENOMEM)
+ */
+int named_mutex_lock(void *ns, const char *name);
+/**
+ * @brief Unlock a name
+ *
+ * @param ns
+ * @param name
+ * @return int errno (ENOENT)
+ */
+int named_mutex_unlock(void *ns, const char *name);
 
-#define PathFmt_CtrlServer "%s/propd.%s.ctrl"
-#define PathFmt_IOServer   "%s/propd.%s.io"
-// #define PathFmt_CtrlClient "%s/prop.%s.ctrl"
-// #define PathFmt_IOClient   "%s/prop.%s.io"
-
-#define logFmtRet       " (%d)"
-#define logFmtErrno     " (%d:%s)"
-#define logArgErrno     errno, strerror(errno)
-#define logArgErrno_(e) (e), strerror(e)
-#define logFmtKey       "<%s>"
-#define logFmtValue     "\"%s\""
-
-#endif /* __PROPD_GLOBAL_H */
+#endif /* __NAMED_MUTEX_H */

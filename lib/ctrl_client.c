@@ -43,7 +43,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 
-#define logFmtHead "[client@ctrl] "
+#define logFmtHead "[client::ctrl] "
 
 struct ctrl_context {
     int                sockfd;
@@ -64,7 +64,7 @@ static int ctrl_init(ctrl_context_t *ctx, const char *server, size_t delta_lengt
 
     cliaddr.sun_family  = AF_LOCAL;
     cliaddr.sun_path[0] = '\0';
-    random_alphabet(&cliaddr.sun_path[1], sizeof(cliaddr.sun_path) - 2, false);
+    random_alnum(&cliaddr.sun_path[1], sizeof(cliaddr.sun_path) - 2);
     cliaddr.sun_path[sizeof(cliaddr.sun_path) - 1] = 'X';
 
     if (bind(ctx->sockfd, (const struct sockaddr *)&cliaddr, sizeof(struct sockaddr_un))) {

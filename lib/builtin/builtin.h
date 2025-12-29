@@ -31,15 +31,16 @@
 #ifndef __PROPD_BRIDGE_H
 #define __PROPD_BRIDGE_H
 
-#include "io/io.h"
-#include "io/memio/position.h"
+#include "storage.h"
 
-#define BRIDGE_INITIALIZER {.priv = NULL, .get = NULL, .set = NULL, .del = NULL, .deinit = NULL}
-static inline bool bridge_is_bad(const io_t *io) { return !io->get && !io->set && !io->del; }
+int constructor_file(storage_ctx_t *ctx, const char *name, const char *dir);
+int constructor_unix(storage_ctx_t *ctx, const char *name);
+int constructor_memory(storage_ctx_t *ctx, const char *name, long phy, const void *layout);
+int constructor_tcp(storage_ctx_t *ctx, const char *name, const char *ip, unsigned short port);
 
-io_t bridge_file(const char *dir);
-io_t bridge_memory(long phy, const pos_t *layout);
-io_t bridge_tcp(const char *ip, unsigned short port);
-io_t bridge_unix(const char *target);
+extern storage_parseConfig_t file_parseConfig;
+extern storage_parseConfig_t unix_parseConfig;
+extern storage_parseConfig_t memory_parseConfig;
+extern storage_parseConfig_t tcp_parseConfig;
 
 #endif /* __PROPD_BRIDGE_H */

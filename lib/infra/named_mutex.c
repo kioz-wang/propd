@@ -30,8 +30,8 @@
 
 #include "named_mutex.h"
 #include "tree.h"
-#include <asm-generic/errno-base.h>
 #include <assert.h>
+#include <errno.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
@@ -65,28 +65,23 @@ static int cmp(nmtx_t *a, nmtx_t *b) { return strcmp(a->name, b->name); }
 
 RB_GENERATE_STATIC(nmtx_tree, named_mutex, entry, cmp);
 
-static void named_mutex_destroy(nmtx_t *nmtx) {
-    if (nmtx) {
-        assert(nmtx->nref == 0);
-        if (nmtx->name) {
-            free((void *)nmtx->name);
-            pthread_mutex_destroy(&nmtx->mutex);
-        }
-        free(nmtx);
-    }
-}
-
 static nmtx_t *named_mutex_create(const char *name) {
     nmtx_t *nmtx = (nmtx_t *)calloc(1, sizeof(nmtx_t));
-    if (!nmtx) goto exit;
+    if (!nmtx) return NULL;
     if (!(nmtx->name = strdup(name))) {
-        goto exit;
+        free(nmtx);
+        return NULL;
     }
     pthread_mutex_init(&nmtx->mutex, NULL);
     return nmtx;
-exit:
-    named_mutex_destroy(nmtx);
-    return NULL;
+}
+
+static void named_mutex_destroy(nmtx_t *nmtx) {
+    if (!nmtx) return;
+    assert(nmtx->nref == 0);
+    pthread_mutex_destroy(&nmtx->mutex);
+    free((void *)nmtx->name);
+    free(nmtx);
 }
 
 void *named_mutex_create_namespace(void) {
@@ -112,7 +107,7 @@ void named_mutex_destroy_namespace(void *_ns) {
 
 int named_mutex_lock(void *_ns, const char *name) {
     nmtx_t *nmtx = named_mutex_create(name);
-    if (!nmtx) return ENOMEM;
+    if (!nmtx) return errno;
     nmtx_namespace_t *ns = _ns;
 
     pthread_mutex_lock(&ns->mutex);

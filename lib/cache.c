@@ -29,10 +29,34 @@
  */
 
 #include "cache.h"
+#include "global.h"
+#include "infra/tree.h"
 #include "logger/logger.h"
 #include <errno.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+
+struct cache_item {
+    const char    *key;
+    const value_t *value;
+    timestamp_t    modified;
+    timestamp_t    duration; /* 值为DURATION_INF时，表示永不过期*/
+    RB_ENTRY(cache_item) entry;
+};
+typedef struct cache_item cache_item_t;
+
+struct cache {
+    RB_HEAD(cache_tree, cache_item) tree;
+    timestamp_t      min_interval;
+    timestamp_t      max_interval;
+    timestamp_t      default_duration;
+    timestamp_t      min_duration;
+    pthread_rwlock_t rwlock;
+    sem_t            clean_notice;
+    pthread_t        cleaner;
+};
+typedef struct cache cache_t;
 
 #if !defined(__uintptr_t_defined) && !defined(__uintptr_t)
 #if defined(__LP64__) || defined(_LP64)
@@ -72,16 +96,25 @@ exit:
 
 #define duration_is_outdate(item, now) (item)->duration != DURATION_INF && (item)->modified + (item)->duration <= (now)
 
+const char *duration_fmt(char *buffer, size_t length, timestamp_t duration) {
+    if (DURATION_INF == duration) snprintf(buffer, length, "inf");
+    else snprintf(buffer, length, "%ldms", timestamp_to_ms(duration));
+    return buffer;
+}
+
 static void *cache_cleaner(void *_arg) {
     cache_t    *cache = (cache_t *)_arg;
     timestamp_t last  = 0;
+
+    logfI("[cache::cleaner] start with interval [%ld,%ld], unit: ms", timestamp_to_ms(cache->min_interval),
+          timestamp_to_ms(cache->max_interval));
 
     for (;;) {
         struct timespec ts  = timestamp2spec(feature(false, timestamp_to_ms(cache->max_interval)));
         int             ret = sem_timedwait(&cache->clean_notice, &ts);
         if (!ret) {
             if (timestamp(true) - last < cache->min_interval) {
-                logfD("[cache][cleaner] ignore notice");
+                logfD("[cache::cleaner] ignore notice");
                 continue;
             }
         }
@@ -91,7 +124,7 @@ static void *cache_cleaner(void *_arg) {
         last = timestamp(true);
         RB_FOREACH_SAFE(item, cache_tree, &cache->tree, temp) {
             if (duration_is_outdate(item, last)) {
-                logfV("[cache][cleaner] clean <%s>", item->key);
+                logfV("[cache::cleaner] clean " logFmtKey, item->key);
                 RB_REMOVE(cache_tree, &cache->tree, item);
                 item_destroy(item);
             }
@@ -101,8 +134,8 @@ static void *cache_cleaner(void *_arg) {
     return NULL;
 }
 
-cache_t *cache_create(timestamp_t min_interval, timestamp_t max_interval, timestamp_t default_duration,
-                      timestamp_t min_duration) {
+void *cache_create(timestamp_t min_interval, timestamp_t max_interval, timestamp_t default_duration,
+                   timestamp_t min_duration) {
     cache_t *cache = (cache_t *)calloc(1, sizeof(cache_t));
     if (!cache) return NULL;
     int ret = 0;
@@ -117,6 +150,7 @@ cache_t *cache_create(timestamp_t min_interval, timestamp_t max_interval, timest
     if (ret) {
         logfE("[cache] fail to pthread_rwlock_init" logFmtRet, ret);
         free(cache);
+        errno = ret;
         return NULL;
     }
     sem_init(&cache->clean_notice, 0, 0);
@@ -126,16 +160,16 @@ cache_t *cache_create(timestamp_t min_interval, timestamp_t max_interval, timest
         sem_destroy(&cache->clean_notice);
         pthread_rwlock_destroy(&cache->rwlock);
         free(cache);
+        errno = ret;
         return NULL;
     }
     pthread_detach(cache->cleaner);
-    logfI("[cache][cleaner] start with interval [%ld,%ld], unit: ms", timestamp_to_ms(min_interval),
-          timestamp_to_ms(max_interval));
     logfI("[cache] created");
     return cache;
 }
 
-void cache_destroy(cache_t *cache) {
+void cache_destroy(void *_cache) {
+    cache_t *cache = _cache;
     if (!cache) return;
 
     pthread_cancel(cache->cleaner);
@@ -155,7 +189,8 @@ void cache_destroy(cache_t *cache) {
     logfI("[cache] destroyed");
 }
 
-int cache_get(cache_t *cache, const char *key, const value_t **value, timestamp_t *duration) {
+int cache_get(void *_cache, const char *key, const value_t **value, timestamp_t *duration) {
+    cache_t      *cache  = _cache;
     int           ret    = 0;
     cache_item_t *item   = NULL;
     cache_item_t  shadow = {.key = key};
@@ -164,13 +199,13 @@ int cache_get(cache_t *cache, const char *key, const value_t **value, timestamp_
 
     item = RB_FIND(cache_tree, &cache->tree, &shadow);
     if (!item) {
-        logfD("[cache][get] <%s> not found", key);
+        logfD("[cache] get" logFmtKey " but not found", key);
         ret = ENOENT;
         goto exit;
     }
     timestamp_t now = timestamp(true);
     if (duration_is_outdate(item, now)) {
-        logfD("[cache][get] <%s> out of date, notice cleaner", key);
+        logfD("[cache] get" logFmtKey " but out of date, notice cleaner", key);
         sem_post(&cache->clean_notice);
         ret = ENOENT;
         goto exit;
@@ -178,8 +213,8 @@ int cache_get(cache_t *cache, const char *key, const value_t **value, timestamp_
 
     *value = value_dup(item->value);
     if (!*value) {
-        logfE("[cache][get] <%s> fail to allocate value" logFmtErrno, key, logArgErrno);
-        ret = ENOMEM;
+        logfE("[cache] get" logFmtKey " but fail to allocate value" logFmtErrno, key, logArgErrno);
+        ret = errno;
         goto exit;
     }
 
@@ -191,21 +226,23 @@ int cache_get(cache_t *cache, const char *key, const value_t **value, timestamp_
     *duration = remain;
 
     char buffer[512] = {0};
-    logfV("[cache] get <%s> is \"%s\" with duration %ldms", key, value_fmt(buffer, sizeof(buffer), *value, false),
-          timestamp_to_ms(remain));
+    char buffer1[32] = {0};
+    logfV("[cache] get" logFmtKey " is" logFmtValue " with duration %s", key,
+          value_fmt(buffer, sizeof(buffer), *value, false), duration_fmt(buffer1, sizeof(buffer1), remain));
 
 exit:
     pthread_rwlock_unlock(&cache->rwlock);
     return ret;
 }
 
-int cache_set(cache_t *cache, const char *key, const value_t *value, timestamp_t duration) {
+int cache_set(void *_cache, const char *key, const value_t *value, timestamp_t duration) {
+    cache_t    *cache = _cache;
     timestamp_t _duration =
         duration ? (duration < cache->min_duration ? cache->min_duration : duration) : cache->default_duration;
     cache_item_t *item = item_create(key, value, _duration);
     if (!item) {
-        logfE("[cache][set] <%s> fail to allocate item" logFmtErrno, key, logArgErrno);
-        return ENOMEM;
+        logfE("[cache] set" logFmtKey " but fail to allocate item" logFmtErrno, key, logArgErrno);
+        return errno;
     }
     int ret = 0;
 
@@ -217,8 +254,8 @@ int cache_set(cache_t *cache, const char *key, const value_t *value, timestamp_t
         free((void *)old_item->value);
         old_item->value = value_dup(value);
         if (!old_item->value) {
-            logfE("[cache][set] <%s> fail to allocate value" logFmtErrno, key, logArgErrno);
-            ret = ENOMEM;
+            logfE("[cache] set" logFmtKey " but fail to allocate value" logFmtErrno, key, logArgErrno);
+            ret = errno;
             goto exit;
         }
         old_item->modified = timestamp(true);
@@ -226,15 +263,17 @@ int cache_set(cache_t *cache, const char *key, const value_t *value, timestamp_t
     }
 
     char buffer[512] = {0};
-    logfV("[cache] set <%s> to \"%s\" with duration %ldms", key, value_fmt(buffer, sizeof(buffer), value, false),
-          timestamp_to_ms(_duration));
+    char buffer1[32] = {0};
+    logfV("[cache] set" logFmtKey " as" logFmtValue " with duration %s", key,
+          value_fmt(buffer, sizeof(buffer), value, false), duration_fmt(buffer1, sizeof(buffer1), _duration));
 
 exit:
     pthread_rwlock_unlock(&cache->rwlock);
     return ret;
 }
 
-int cache_del(cache_t *cache, const char *key) {
+int cache_del(void *_cache, const char *key) {
+    cache_t      *cache  = _cache;
     int           ret    = 0;
     cache_item_t *item   = NULL;
     cache_item_t  shadow = {.key = key};
@@ -243,14 +282,14 @@ int cache_del(cache_t *cache, const char *key) {
 
     item = RB_FIND(cache_tree, &cache->tree, &shadow);
     if (!item) {
-        logfD("[cache][del] <%s> not found", key);
+        logfD("[cache] del" logFmtKey " but not found", key);
         ret = ENOENT;
         goto exit;
     }
     RB_REMOVE(cache_tree, &cache->tree, item);
     item_destroy(item);
 
-    logfV("[cache] del <%s>", key);
+    logfV("[cache] del" logFmtKey, key);
 
 exit:
     pthread_rwlock_unlock(&cache->rwlock);

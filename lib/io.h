@@ -1,9 +1,9 @@
 /**
- * @file tcp.c
+ * @file io.h
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
- * @date 2025-12-15
+ * @date 2025-12-26
  *
  * @copyright MIT License
  *
@@ -28,28 +28,53 @@
  *  SOFTWARE.
  */
 
-#include "io/bridge.h"
-#include "logger/logger.h"
-#include <errno.h>
+#ifndef __PROPD_IO_H
+#define __PROPD_IO_H
 
-#define logFmtHead  "[bridge][tcp] "
-#define logFmtKey   "<%s> "
-#define logFmtValue "\"%s\""
+#include "storage.h"
 
-struct priv {
-    /* TODO */;
+struct io_ctx {
+    void *nmtx_ns;
+    void *cache;
+    void *route;
 };
-typedef struct priv priv_t;
+typedef struct io_ctx io_ctx_t;
 
-io_t bridge_tcp(const char *ip, unsigned short port) {
-    io_t io = BRIDGE_INITIALIZER;
-    logfE(logFmtHead "unsupported");
+/**
+ * @brief Get key on server end
+ *
+ * @param io
+ * @param key
+ * @param value
+ * @param duration
+ * @return int errno
+ */
+int io_get(const io_ctx_t *io, const char *key, const value_t **value, timestamp_t *duration);
+/**
+ * @brief Update key cache on server end (Only used in register_child of ctrl server)
+ *
+ * @param io
+ * @param key
+ * @param storage
+ * @return int errno
+ */
+int io_update(const io_ctx_t *io, const char *key, const storage_ctx_t *storage);
+/**
+ * @brief Set key on server end
+ *
+ * @param io
+ * @param key
+ * @param value
+ * @return int errno
+ */
+int io_set(const io_ctx_t *io, const char *key, const value_t *value);
+/**
+ * @brief Del key on server end
+ *
+ * @param io
+ * @param key
+ * @return int errno
+ */
+int io_del(const io_ctx_t *io, const char *key);
 
-    priv_t *priv = (priv_t *)malloc(sizeof(priv_t));
-    if (!priv) {
-        logfE(logFmtHead "fail to allocate priv" logFmtErrno, logArgErrno);
-        return io;
-    }
-
-    return io;
-}
+#endif /* __PROPD_IO_H */

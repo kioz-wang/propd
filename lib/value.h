@@ -80,6 +80,12 @@ static inline value_t *value_u64(uint64_t n) { return _value_alloc(_value_u64, s
 static inline value_t *value_float(float n) { return _value_alloc(_value_float, sizeof(n), &n); }
 static inline value_t *value_double(double n) { return _value_alloc(_value_double, sizeof(n), &n); }
 
+/**
+ * @brief
+ *
+ * @param value
+ * @return value_t* On error, return NULL and set errno
+ */
 static inline value_t *value_dup(const value_t *value) { return _value_alloc(value->type, value->length, value->data); }
 
 #define _value_to(_typ, _type)                                                                                         \
@@ -96,7 +102,22 @@ static inline _value_to(u64, uint64_t);
 static inline _value_to(float, float);
 static inline _value_to(double, double);
 
-value_t    *value_parse(const char *str);
+/**
+ * @brief Parse and allocate a value from a cstring
+ *
+ * @param str
+ * @return value_t* On error, return NULL and set errno
+ */
+value_t *value_parse(const char *str);
+/**
+ * @brief Format a value (Only for logging, due to potential truncation)
+ *
+ * @param buffer
+ * @param length
+ * @param value
+ * @param notype
+ * @return const char* Always return a pointer to buffer
+ */
 const char *value_fmt(char *buffer, size_t length, const value_t *value, bool notype);
 
 #endif /* __PROPD_VALUE_H */

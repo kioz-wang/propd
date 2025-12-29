@@ -29,56 +29,64 @@
  */
 
 #include "route.h"
+#include "global.h"
 #include "logger/logger.h"
 #include "misc.h"
 #include <assert.h>
 #include <errno.h>
+#include <pthread.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
-route_item_t *route_item_create(io_t io, const char *name, uint32_t num_prefix, const char *prefix[]) {
-    route_item_t *item = (route_item_t *)malloc(sizeof(route_item_t));
-    if (!item) goto exit;
-    item->io = io;
-    if (!(item->name = strdup(name))) goto exit;
-    if (!(item->prefix = arraydup_cstring(prefix, num_prefix))) goto exit;
+route_item_t *route_item_create(const storage_ctx_t *storage_ctx, uint32_t num_prefix, const char *prefix[]) {
+    route_item_t *item = malloc(sizeof(route_item_t));
+    if (!item) return NULL;
+    if (!(item->prefix = arraydup_cstring(prefix, num_prefix))) {
+        free(item);
+        return NULL;
+    };
+    item->storage_ctx = *storage_ctx;
+    item->nref        = 0;
     return item;
-exit:
-    route_item_destroy(item);
-    return NULL;
 }
 
 void route_item_destroy(route_item_t *item) {
-    if (item) {
-        free((void *)item->name);
-        arrayfree_cstring(item->prefix);
-        io_deinit(&item->io);
-        free(item);
-    }
+    if (!item) return;
+    arrayfree_cstring(item->prefix);
+    storage_destructor(&item->storage_ctx);
+    free(item);
 }
 
-route_t *route_create(void) {
-    route_t *route = (route_t *)malloc(sizeof(route_t));
+struct route {
+    struct route_list list;
+    pthread_rwlock_t  rwlock;
+};
+typedef struct route route_t;
+
+void *route_create(void) {
+    route_t *route = malloc(sizeof(route_t));
     if (!route) return NULL;
-    int ret = 0;
 
     LIST_INIT(&route->list);
 
-    ret = pthread_rwlock_init(&route->rwlock, NULL);
-    if (ret) {
-        logfE("[route] fail to pthread_rwlock_init" logFmtRet, ret);
+    errno = pthread_rwlock_init(&route->rwlock, NULL);
+    if (errno) {
         free(route);
         return NULL;
     }
-    logfI("[route] created");
     return route;
+    logfI("[route] created");
 }
 
-void route_destroy(route_t *route) {
+void route_destroy(void *_route) {
+    route_t *route = _route;
     if (!route) return;
 
     pthread_rwlock_rdlock(&route->rwlock);
+    route_item_t *temp = NULL;
+    LIST_FOREACH(temp, &route->list, entry) { logfE("[route] remain %s", temp->storage_ctx.name); }
     assert(LIST_EMPTY(&route->list)); /* TODO ? */
     pthread_rwlock_unlock(&route->rwlock);
 
@@ -87,28 +95,35 @@ void route_destroy(route_t *route) {
     logfI("[route] destroyed");
 }
 
-int route_register(route_t *route, io_t io, const char *name, uint32_t num_prefix, const char *prefix[]) {
-    route_item_t *item = route_item_create(io, name, num_prefix, prefix);
-    if (!item) {
-        logfE("[route] <%s> fail to allocate item" logFmtErrno, name, logArgErrno);
-        return ENOMEM;
+void route_init(void *_route, struct route_list list) {
+    route_t *route = _route;
+
+    route->list.lh_first = list.lh_first;
+    if (list.lh_first) {
+        list.lh_first->entry.le_prev = &route->list.lh_first;
+        // list.lh_first = NULL;
     }
-    int ret = 0;
+}
+
+int route_register(void *_route, const storage_ctx_t *storage_ctx, uint32_t num_prefix, const char *prefix[]) {
+    route_t      *route = _route;
+    int           ret   = 0;
+    route_item_t *item  = route_item_create(storage_ctx, num_prefix, prefix);
+    if (!item) return errno;
 
     pthread_rwlock_wrlock(&route->rwlock);
 
     route_item_t *temp = NULL;
     LIST_FOREACH(temp, &route->list, entry) {
-        if (!strcmp(temp->name, name)) {
-            logfE("[route] <%s> item name occupied", name);
+        if (!strcmp(temp->storage_ctx.name, storage_ctx->name)) {
+            logfE("[route] register %s but name occupied", storage_ctx->name);
             ret = EEXIST;
             goto exit;
         }
     }
 
     LIST_INSERT_HEAD(&route->list, item, entry);
-
-    logfI("[route] <%s> register item", name);
+    logfI("[route] register %s", storage_ctx->name);
 
 exit:
     pthread_rwlock_unlock(&route->rwlock);
@@ -116,34 +131,41 @@ exit:
     return ret;
 }
 
-int route_unregister(route_t *route, const char *name) {
-    route_item_t *item = NULL;
-    int           ret  = 0;
+int route_unregister(void *_route, const char *name) {
+    route_t      *route = _route;
+    int           ret   = 0;
+    route_item_t *item  = NULL;
 
     pthread_rwlock_wrlock(&route->rwlock);
 
     if (name) {
         LIST_FOREACH(item, &route->list, entry) {
-            if (!strcmp(item->name, name)) {
+            if (!strcmp(item->storage_ctx.name, name)) {
                 break;
             }
         }
         if (!item) {
-            logfE("[route] <%s> item not found", name);
+            logfE("[route] unregister %s but not found", name);
             ret = ENOENT;
             goto exit;
         }
     } else {
         if (LIST_EMPTY(&route->list)) {
-            logfW("[route] <?> no item anymore");
             ret = ENOENT;
             goto exit;
         }
         item = LIST_FIRST(&route->list);
     }
-    LIST_REMOVE(item, entry);
+    int nref = atomic_load(&item->nref);
+    if (nref) {
+        logfE("[route] unregister %s but busy (%d refs)", item->storage_ctx.name, nref);
+        item = NULL;
+        ret  = EBUSY;
+        goto exit;
+    }
 
-    logfI("[route] <%s> unregister %sitem", item->name, name ? "" : "first ");
+    LIST_REMOVE(item, entry);
+    logfI("[route] unregister %s", item->storage_ctx.name);
 
 exit:
     pthread_rwlock_unlock(&route->rwlock);
@@ -151,25 +173,34 @@ exit:
     return ret;
 }
 
-int route_match(route_t *route, const char *key, io_t *io) {
-    route_item_t *item = NULL;
-    int           ret  = 0;
+int route_match(void *_route, const char *key, const storage_ctx_t **storage_ctx) {
+    route_t      *route = _route;
+    int           ret   = 0;
+    route_item_t *item  = NULL;
 
     pthread_rwlock_rdlock(&route->rwlock);
 
     LIST_FOREACH(item, &route->list, entry) {
         for (int i = 0; item->prefix[i]; i++) {
             if (prefix_match(item->prefix[i], key)) {
-                logfV("[route] <%s> match <%s> using %s", item->name, key, item->prefix[i]);
-                if (io) *io = item->io;
+                logfV("[route] " logFmtKey " match " logFmtKey " of %s", key, item->prefix[i], item->storage_ctx.name);
+                if (storage_ctx) {
+                    atomic_fetch_add(&item->nref, 1);
+                    *storage_ctx = &item->storage_ctx;
+                }
                 goto exit;
             }
         }
     }
-    logfW("[route] <?> no match for <%s>", key);
     ret = ENOENT;
+    logfE("[route] " logFmtKey " match nothing", key);
 
 exit:
     pthread_rwlock_unlock(&route->rwlock);
     return ret;
+}
+
+void route_deref(const storage_ctx_t *storage_ctx) {
+    route_item_t *item = (route_item_t *)((char *)storage_ctx - offsetof(route_item_t, storage_ctx));
+    atomic_fetch_sub(&item->nref, 1);
 }

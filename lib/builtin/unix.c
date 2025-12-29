@@ -29,7 +29,6 @@
  */
 
 #include "global.h"
-#include "io/bridge.h"
 #include "io_server.h"
 #include "logger/logger.h"
 #include "misc.h"
@@ -42,9 +41,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 
-#define logFmtHead  "[bridge][unix] "
-#define logFmtKey   "<%s> "
-#define logFmtValue "\"%s\""
+#define logFmtHead "[storage::(unix)] "
 
 static int io_connect(const char *target, int *connfd) {
     int                ret     = 0;
@@ -52,19 +49,19 @@ static int io_connect(const char *target, int *connfd) {
     int                _connfd = socket(AF_LOCAL, SOCK_STREAM, 0);
     if (_connfd == -1) {
         logfE(logFmtHead "fail to get socket" logFmtErrno, logArgErrno);
-        return -1;
+        return errno;
     }
 
     cliaddr.sun_family  = AF_LOCAL;
     cliaddr.sun_path[0] = '\0';
-    random_alphabet(&cliaddr.sun_path[1], sizeof(cliaddr.sun_path) - 2, false);
+    random_alnum(&cliaddr.sun_path[1], sizeof(cliaddr.sun_path) - 2);
     cliaddr.sun_path[sizeof(cliaddr.sun_path) - 1] = 'X';
 
     ret = bind(_connfd, (const struct sockaddr *)&cliaddr, sizeof(cliaddr));
     if (ret) {
         logfE(logFmtHead "fail to bind" logFmtErrno, logArgErrno);
         close(_connfd);
-        return ret;
+        return ENXIO;
     }
 
     servaddr.sun_family = AF_LOCAL;
@@ -74,12 +71,12 @@ static int io_connect(const char *target, int *connfd) {
     if (ret) {
         logfE(logFmtHead "fail to connect %s" logFmtErrno, target, logArgErrno);
         close(_connfd);
-        return ret;
+        return errno;
     }
 
     logfI(logFmtHead "connect %s as %d", target, _connfd);
     *connfd = _connfd;
-    return ret;
+    return 0;
 }
 
 static void io_disconnect(int connfd) {
@@ -98,12 +95,12 @@ static void io_begin(int connfd, io_type_t type, const char *key, const value_t 
 
     n = send(connfd, &pkg_head, sizeof(pkg_head), 0);
     assert(n == sizeof(pkg_head));
-    logfD(logFmtHead logFmtKey ">>>%d send header of package with type %d", key, connfd, type);
+    logfD(logFmtHead logFmtKey " >>>%d send header of package with type %d", key, connfd, type);
 
     if (value) {
         n = send(connfd, value->data, value->length, 0);
         assert(n == value->length);
-        logfD(logFmtHead logFmtKey ">>>%d send data of value with length %d", key, connfd, value->length);
+        logfD(logFmtHead logFmtKey " >>>%d send data of value with length %d", key, connfd, value->length);
     }
 }
 
@@ -113,13 +110,13 @@ static int io_end(int connfd, const char *key) {
     if (sizeof(result) != recv(connfd, &result, sizeof(result), 0)) {
         return EIO;
     }
-    logfD(logFmtHead logFmtKey "<<<%d recv result" logFmtRet, key, connfd, result);
+    logfD(logFmtHead logFmtKey " <<<%d recv result" logFmtRet, key, connfd, result);
     return result;
 }
 
 void unix_stream_discard(int connfd) {
     ssize_t n;
-    char    discard[32];
+    char    discard[16];
     int     fl = fcntl(connfd, F_GETFL);
     fcntl(connfd, F_SETFL, fl | O_NONBLOCK);
     do {
@@ -144,13 +141,13 @@ static int get(const char *target, const char *key, const value_t **value, times
         ret = EIO;
         goto exit;
     }
-    logfD(logFmtHead logFmtKey "<<<%d recv duration %ld", key, connfd, _duration);
+    logfD(logFmtHead logFmtKey " <<<%d recv duration %ld", key, connfd, _duration);
 
     if (sizeof(value_head) != recv(connfd, &value_head, sizeof(value_head), 0)) {
         ret = EIO;
         goto exit;
     }
-    logfD(logFmtHead logFmtKey "<<<%d recv header of value with type %d", key, connfd, value_head.type);
+    logfD(logFmtHead logFmtKey " <<<%d recv header of value with type %d", key, connfd, value_head.type);
 
     _value = (value_t *)malloc(sizeof(value_t) + value_head.length);
     if (!_value) {
@@ -163,7 +160,7 @@ static int get(const char *target, const char *key, const value_t **value, times
         ret = EIO;
         goto exit;
     }
-    logfD(logFmtHead logFmtKey "<<<%d recv data of value with length %d", key, connfd, _value->length);
+    logfD(logFmtHead logFmtKey " <<<%d recv data of value with length %d", key, connfd, _value->length);
 
     ret = io_end(connfd, key);
     if (ret) {
@@ -171,17 +168,13 @@ static int get(const char *target, const char *key, const value_t **value, times
     }
 
     io_disconnect(connfd);
-
     *value    = _value;
     *duration = _duration;
-
-    char buffer[256];
-    logfI(logFmtHead logFmtKey "get " logFmtValue " with duration %ldms", key,
-          value_fmt(buffer, sizeof(buffer), _value, false), timestamp_to_ms(_duration));
     return 0;
 
 exit:
     unix_stream_discard(connfd);
+    io_disconnect(connfd);
     free(_value);
     return ret;
 }
@@ -195,10 +188,6 @@ static int set(const char *target, const char *key, const value_t *value) {
 
     io_begin(connfd, _io_set, key, value);
     ret = io_end(connfd, key);
-    if (!ret) {
-        char buffer[256];
-        logfI(logFmtHead logFmtKey "set " logFmtValue, key, value_fmt(buffer, sizeof(buffer), value, false));
-    }
 
     io_disconnect(connfd);
     return ret;
@@ -213,25 +202,37 @@ static int del(const char *target, const char *key) {
 
     io_begin(connfd, _io_del, key, NULL);
     ret = io_end(connfd, key);
-    if (!ret) {
-        logfI(logFmtHead logFmtKey "del", key);
-    }
 
     io_disconnect(connfd);
     return ret;
 }
 
-io_t bridge_unix(const char *target) {
-    io_t io = BRIDGE_INITIALIZER;
-
-    if (!(io.priv = strdup(target))) {
-        logfE(logFmtHead "fail to allocate priv" logFmtErrno, logArgErrno);
-        return io;
+int constructor_unix(storage_ctx_t *ctx, const char *target) {
+    if (!(ctx->name = strdup(target))) {
+        logfE(logFmtHead "fail to allocate name" logFmtErrno, logArgErrno);
+        return errno;
     }
 
-    io.get    = (typeof(io.get))get;
-    io.set    = (typeof(io.set))set;
-    io.del    = (typeof(io.del))del;
-    io.deinit = free;
-    return io;
+    if (!(ctx->priv = strdup(target))) {
+        logfE(logFmtHead "fail to allocate priv" logFmtErrno, logArgErrno);
+        return errno;
+    }
+
+    ctx->get        = (typeof(ctx->get))get;
+    ctx->set        = (typeof(ctx->set))set;
+    ctx->del        = (typeof(ctx->del))del;
+    ctx->destructor = free;
+    return 0;
 }
+
+static int parse(storage_ctx_t *ctx, const char *name, const char **__attribute__((unused)) args) {
+    return constructor_unix(ctx, name);
+}
+
+storage_parseConfig_t unix_parseConfig = {
+    .name    = "unix",
+    .argName = "",
+    .note    = "注册类型为unix的本地IO（与通过--children注册不同的是：不需要child具有ctrl server，且不支持“立即缓存”）",
+    .argNum  = 0,
+    .parse   = parse,
+};

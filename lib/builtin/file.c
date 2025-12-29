@@ -28,7 +28,8 @@
  *  SOFTWARE.
  */
 
-#include "io/bridge.h"
+#include "builtin.h"
+#include "global.h"
 #include "logger/logger.h"
 #include <errno.h>
 #include <linux/limits.h>
@@ -37,9 +38,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#define logFmtHead  "[bridge][file] "
-#define logFmtKey   "<%s> "
-#define logFmtValue "\"%s\""
+#define logFmtHead "[storage::(file)] "
 
 static int file_get(const char *root, const char *key, const value_t **value, timestamp_t *duration) {
     int      ret = 0;
@@ -49,24 +48,24 @@ static int file_get(const char *root, const char *key, const value_t **value, ti
     snprintf(path, sizeof(path), "%s/%s", root, key);
     FILE *fp = fopen(path, "r");
     if (!fp) {
-        logfE(logFmtHead logFmtKey "fail to open %s" logFmtErrno, key, path, logArgErrno);
+        logfE(logFmtHead "get " logFmtKey " but fail to open %s" logFmtErrno, key, path, logArgErrno);
         return errno;
     }
     if (1 != fread(&value_head, sizeof(value_t), 1, fp)) {
-        logfE(logFmtHead logFmtKey "fail to read header of value", key);
+        logfE(logFmtHead "get " logFmtKey " but fail to read header of value", key);
         ret = EIO;
         goto exit;
     }
     _value = (value_t *)malloc(sizeof(value_t) + value_head.length);
     if (!_value) {
-        logfE(logFmtHead logFmtKey "fail to allocate value with length %d" logFmtErrno, key, value_head.length,
-              logArgErrno);
+        logfE(logFmtHead "get " logFmtKey " but fail to allocate value with length %d" logFmtErrno, key,
+              value_head.length, logArgErrno);
         ret = errno;
         goto exit;
     }
     memcpy(_value, &value_head, sizeof(value_t));
     if (1 != fread(_value->data, _value->length, 1, fp)) {
-        logfE(logFmtHead logFmtKey "fail to read data of value", key);
+        logfE(logFmtHead "get " logFmtKey " but fail to read data of value", key);
         ret = EIO;
         goto exit;
     }
@@ -74,9 +73,6 @@ static int file_get(const char *root, const char *key, const value_t **value, ti
 
     *value    = _value;
     *duration = 0;
-
-    char buffer[256];
-    logfI(logFmtHead logFmtKey "get " logFmtValue, key, value_fmt(buffer, sizeof(buffer), _value, false));
     return 0;
 
 exit:
@@ -91,19 +87,14 @@ static int file_set(const char *root, const char *key, const value_t *value) {
     snprintf(path, sizeof(path), "%s/%s", root, key);
     FILE *fp = fopen(path, "w");
     if (!fp) {
-        logfE(logFmtHead logFmtKey "fail to open %s" logFmtErrno, key, path, logArgErrno);
+        logfE(logFmtHead "set " logFmtKey " but fail to open %s" logFmtErrno, key, path, logArgErrno);
         return errno;
     }
     if (1 != fwrite(value, sizeof(value_t) + value->length, 1, fp)) {
-        logfE(logFmtHead logFmtKey "fail to write value", key);
+        logfE(logFmtHead "set " logFmtKey " but fail to write value", key);
         ret = EIO;
     }
     fclose(fp);
-
-    if (!ret) {
-        char buffer[256];
-        logfI(logFmtHead logFmtKey "set " logFmtValue, key, value_fmt(buffer, sizeof(buffer), value, false));
-    }
     return ret;
 }
 
@@ -112,30 +103,44 @@ static int file_del(const char *root, const char *key) {
     snprintf(path, sizeof(path), "%s/%s", root, key);
     int ret = unlink(path);
     if (!ret) {
-        logfI(logFmtHead logFmtKey "del", key);
+        return 0;
     }
-    return ret;
+    return errno;
 }
 
-io_t bridge_file(const char *dir) {
-    io_t io = BRIDGE_INITIALIZER;
-
+int constructor_file(storage_ctx_t *ctx, const char *name, const char *dir) {
     if (access(dir, F_OK) == -1) {
         int ret = mkdir(dir, 0755);
         if (ret) {
             logfE(logFmtHead "fail to create root path %s" logFmtErrno, dir, logArgErrno);
-            return io;
+            return errno;
         }
     }
 
-    if (!(io.priv = strdup(dir))) {
+    if (!(ctx->name = strdup(name))) {
+        logfE(logFmtHead "fail to allocate name" logFmtErrno, logArgErrno);
+        return errno;
+    }
+    if (!(ctx->priv = strdup(dir))) {
         logfE(logFmtHead "fail to allocate priv" logFmtErrno, logArgErrno);
-        return io;
+        return errno;
     }
 
-    io.get    = (typeof(io.get))file_get;
-    io.set    = (typeof(io.set))file_set;
-    io.del    = (typeof(io.del))file_del;
-    io.deinit = free;
-    return io;
+    ctx->get        = (typeof(ctx->get))file_get;
+    ctx->set        = (typeof(ctx->set))file_set;
+    ctx->del        = (typeof(ctx->del))file_del;
+    ctx->destructor = free;
+    return 0;
 }
+
+static int parse(storage_ctx_t *ctx, const char *name, const char **args) {
+    return constructor_file(ctx, name, args[0]);
+}
+
+storage_parseConfig_t file_parseConfig = {
+    .name    = "file",
+    .argName = "<DIR>,",
+    .note    = "注册类型为file的本地IO。DIR是file IO的根目录",
+    .argNum  = 1,
+    .parse   = parse,
+};
