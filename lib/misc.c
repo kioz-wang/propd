@@ -47,8 +47,8 @@ void random_alnum(char *addr, size_t length) {
     for (size_t i = 0; i < length; i++) {
         int  ci = rand_r(&seed) % (26 * 2 + 10);
         char c;
-        if (ci > 26 * 2) c = '0' + ci - 26 * 2;
-        else if (ci > 26) c = 'a' + ci - 26;
+        if (ci >= 26 * 2) c = '0' + ci - 26 * 2;
+        else if (ci >= 26) c = 'a' + ci - 26;
         else c = 'A' + ci;
         addr[i] = c;
     }
@@ -124,6 +124,23 @@ const char **arrayparse_cstring(const char *s, int *_num) {
     free(_s);
     if (dup && _num) *_num = num;
     return dup;
+}
+
+const char *arrayfmt_cstring(char *buffer, size_t length, const char **array) {
+    assert(array);
+    assert(length > 3);
+    int pos = 0;
+
+    for (int i = 0; array[i]; i++) {
+        int n = snprintf(&buffer[pos], length - pos, "%s,", array[i]);
+        if (n < 0 || n >= (int)length - pos) {
+            memset(&buffer[length - 1 - 3], '.', 3);
+            return buffer;
+        }
+        pos += n;
+    }
+    buffer[pos - 1] = '\0';
+    return buffer;
 }
 
 static inline uint8_t dec2hexchar(uint8_t dec, bool upper) {
@@ -214,9 +231,14 @@ bool prefix_match(const char *prefix, const char *str) {
     return c1 == '*';
 }
 
-void dotwait(char c, int unit, int n) {
+void attach_wait(const char *envname, char c, int unit) {
+    const char *n_str = getenv(envname ? envname : "ATTACH_WAIT");
+    if (!n_str) return;
+
+    int n = strtoul(n_str, NULL, 0);
+    if (!n) return;
+
     assert(unit);
-    assert(n);
     int b = 0;
     fputc('\n', stderr);
     do {
@@ -228,3 +250,45 @@ void dotwait(char c, int unit, int n) {
     } while (--n);
     fputc('\n', stderr);
 }
+
+#ifdef __TEST_MISC
+
+#include <ctype.h>
+static void TEST_random_alnum(void) {
+    char buffer[64];
+    random_alnum(buffer, sizeof(buffer));
+    fprintf(stderr, "%*s\n", (int)sizeof(buffer), buffer);
+    for (size_t i = 0; i < sizeof(buffer); i++)
+        assert(isalnum(buffer[i]));
+}
+
+static void TEST_cstring_array(void) {
+    char         buffer0[64];
+    char         buffer1[sizeof(buffer0)];
+    const char  *cstring[] = {"hello", "world", "", "abc,def", "", NULL};
+    const char **dup0      = arraydup_cstring(cstring, sizeof(cstring) / sizeof(cstring[0]) - 1);
+    const char **dup1      = arraydup_cstring(cstring, 0);
+    const char  *formated  = arrayfmt_cstring(buffer0, sizeof(buffer0), dup0);
+    arrayfmt_cstring(buffer1, sizeof(buffer1), dup1);
+    fprintf(stderr, "%s\n", formated);
+    assert(!strncmp(buffer0, buffer1, sizeof(buffer0)));
+    arrayfree_cstring(dup0);
+    arrayfree_cstring(dup1);
+    int          num    = 0;
+    const char **parsed = arrayparse_cstring(buffer0, &num);
+    assert(num == 6);
+    arrayfmt_cstring(buffer1, sizeof(buffer1), parsed);
+    assert(!strncmp(buffer0, buffer1, sizeof(buffer0)));
+    arrayfmt_cstring(buffer1, 10, parsed);
+    assert(!strncmp("hello,...", buffer1, sizeof(buffer0)));
+    arrayfree_cstring(parsed);
+}
+
+int main(int argc, char *argv[]) {
+    for (int i = 0; i < 100; i++)
+        TEST_random_alnum();
+
+    TEST_cstring_array();
+}
+
+#endif /* __TEST_MISC */

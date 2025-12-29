@@ -157,10 +157,10 @@ void propd_config_apply_parser(propd_config_t *config, storage_parseConfig_t *pa
 }
 
 void propd_config_parse(propd_config_t *config, int argc, char *argv[]) {
-    const char            *shortopts   = "hvN:n:D";
-    struct option         *longopts    = NULL;
-    int                    num_longopt = 0;
-    storage_parseConfig_t *parseConfig;
+    const char            *shortopts       = "hvN:n:D";
+    struct option         *longopts        = NULL;
+    int                    num_longopt     = 0;
+    storage_parseConfig_t *parseConfig     = NULL;
     int                    num_parseConfig = 0;
 
     for (int i = 0; g_longopts[i].name; i++) {
@@ -250,15 +250,15 @@ void propd_config_parse(propd_config_t *config, int argc, char *argv[]) {
         default: {
             int i = 0;
             LIST_FOREACH(parseConfig, &config->io_parseConfigs, entry) {
-                if (i == opt) break;
+                if (i++ == opt) break;
             }
-            int          length;
-            const char **args = arrayparse_cstring(optarg, &length);
+            int          num;
+            const char **args = arrayparse_cstring(optarg, &num);
             if (!args) {
                 fprintf(stderr, "fail to parse cstring's array seperated by comma" logFmtErrno "\n", logArgErrno);
                 goto error;
             }
-            if (length < parseConfig->argNum + 2) {
+            if (num < parseConfig->argNum + 2) {
                 fprintf(stderr, "require more arguments, see: --%s %s<NAME>,<PREFIXES>\n", parseConfig->name,
                         parseConfig->argName);
                 goto error;
@@ -411,7 +411,7 @@ static int __propd_run(const propd_config_t *config, int *syncfd) {
         signal(SIGTERM, nop);
         pause();
         logfI(logFmtHead "clean up", name);
-        if (getenv("PROPD_ATTACH")) dotwait('.', 2, 10);
+        attach_wait(NULL, '.', 2);
     }
 
     if (syncfd && ret) {

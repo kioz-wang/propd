@@ -58,6 +58,15 @@ void arrayfree_cstring(const char **array);
  * @return const char**
  */
 const char **arrayparse_cstring(const char *s, int *num);
+/**
+ * @brief Format a cstring's array (Only for logging, due to potential truncation)
+ *
+ * @param buffer
+ * @param length
+ * @param array
+ * @return const char* Always return a pointer to buffer
+ */
+const char *arrayfmt_cstring(char *buffer, size_t length, const char **array);
 
 /**
  * @brief Hexdump memory into buffer (use '.' to replace middle that too long to dump)
@@ -85,10 +94,10 @@ bool prefix_match(const char *prefix, const char *str);
 /**
  * @brief
  *
+ * @param envname How many times (ATTACH_WAIT=0 default)
  * @param c putc
- * @param unit Sleep how long each time
- * @param n How many times
+ * @param unit sleep how long each time
  */
-void dotwait(char c, int unit, int n);
+void attach_wait(const char *envname, char c, int unit);
 
 #endif /* __PROPD_MISC_H */
