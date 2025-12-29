@@ -73,7 +73,7 @@ static int command_get(int argc, char *argv[]) {
 
     int           ret     = 0;
     storage_ctx_t storage = {0};
-    if (constructor_unix(&storage, g_server)) {
+    if (constructor_unix(&storage, storage_unix_long, g_server)) {
         return -1;
     }
     for (int i = 1; argv[i]; i++) {
@@ -98,9 +98,9 @@ static int command_set(int argc, char *argv[]) {
         return UINT8_MAX;
     }
 
-    int            ret     = 0;
+    int           ret     = 0;
     storage_ctx_t storage = {0};
-    if (constructor_unix(&storage, g_server)) {
+    if (constructor_unix(&storage, storage_unix_long, g_server)) {
         return -1;
     }
     for (int i = 1; argv[i]; i += 2) {
@@ -125,9 +125,9 @@ static int command_del(int argc, char *argv[]) {
         return UINT8_MAX;
     }
 
-    int            ret     = 0;
+    int           ret     = 0;
     storage_ctx_t storage = {0};
-    if (constructor_unix(&storage, g_server)) {
+    if (constructor_unix(&storage, storage_unix_long, g_server)) {
         return -1;
     }
     for (int i = 1; argv[i]; i++) {

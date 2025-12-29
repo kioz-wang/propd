@@ -78,7 +78,7 @@ static int register_child(const io_ctx_t *io_ctx, const ctrl_package_register_ch
         return EINVAL;
     }
 
-    if (constructor_unix(&storage, child->name)) {
+    if (constructor_unix(&storage, storage_unix_temp,child->name)) {
         logfE(logFmtHead "register child %s but" logFmtErrno, child->name, logArgErrno);
         return errno;
     }

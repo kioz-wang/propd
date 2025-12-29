@@ -33,8 +33,14 @@
 
 #include "storage.h"
 
+enum storage_unix_type {
+    storage_unix_temp = 0,
+    storage_unix_long,
+};
+typedef enum storage_unix_type storage_unix_t;
+
 int constructor_file(storage_ctx_t *ctx, const char *name, const char *dir);
-int constructor_unix(storage_ctx_t *ctx, const char *name);
+int constructor_unix(storage_ctx_t *ctx, storage_unix_t type, const char *name);
 int constructor_memory(storage_ctx_t *ctx, const char *name, long phy, const void *layout);
 int constructor_tcp(storage_ctx_t *ctx, const char *name, const char *ip, unsigned short port);
 

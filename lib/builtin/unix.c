@@ -28,12 +28,14 @@
  *  SOFTWARE.
  */
 
+#include "builtin/builtin.h"
 #include "global.h"
 #include "io_server.h"
 #include "logger/logger.h"
 #include "misc.h"
 #include <errno.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -42,6 +44,18 @@
 #include <unistd.h>
 
 #define logFmtHead "[storage::(unix)] "
+
+struct priv {
+    storage_unix_t type;
+    union {
+        const char *target; /* type: temp (default) */
+        struct {            /* type: long */
+            int             connfd;
+            pthread_mutex_t mutex;
+        };
+    };
+};
+typedef struct priv priv_t;
 
 static int io_connect(const char *target, int *connfd) {
     int                ret     = 0;
@@ -125,15 +139,20 @@ void unix_stream_discard(int connfd) {
     fcntl(connfd, F_SETFL, fl);
 }
 
-static int get(const char *target, const char *key, const value_t **value, timestamp_t *duration) {
+static int get(priv_t *priv, const char *key, const value_t **value, timestamp_t *duration) {
     int         ret    = 0;
     int         connfd = -1;
     timestamp_t _duration;
     value_t     value_head;
     value_t    *_value = NULL;
 
-    ret = io_connect(target, &connfd);
-    if (ret) return ret;
+    if (priv->type == storage_unix_temp) {
+        ret = io_connect(priv->target, &connfd);
+        if (ret) return ret;
+    } else {
+        connfd = priv->connfd;
+        pthread_mutex_lock(&priv->mutex);
+    }
 
     io_begin(connfd, _io_get, key, NULL);
 
@@ -167,72 +186,141 @@ static int get(const char *target, const char *key, const value_t **value, times
         goto exit;
     }
 
-    io_disconnect(connfd);
+    if (priv->type == storage_unix_temp) {
+        io_disconnect(connfd);
+    } else {
+        pthread_mutex_unlock(&priv->mutex);
+    }
     *value    = _value;
     *duration = _duration;
     return 0;
 
 exit:
     unix_stream_discard(connfd);
-    io_disconnect(connfd);
+    if (priv->type == storage_unix_temp) {
+        io_disconnect(connfd);
+    } else {
+        pthread_mutex_unlock(&priv->mutex);
+    }
     free(_value);
     return ret;
 }
 
-static int set(const char *target, const char *key, const value_t *value) {
+static int set(priv_t *priv, const char *key, const value_t *value) {
     int ret    = 0;
     int connfd = -1;
 
-    ret = io_connect(target, &connfd);
-    if (ret) return ret;
+    if (priv->type == storage_unix_temp) {
+        ret = io_connect(priv->target, &connfd);
+        if (ret) return ret;
+    } else {
+        connfd = priv->connfd;
+        pthread_mutex_lock(&priv->mutex);
+    }
 
     io_begin(connfd, _io_set, key, value);
     ret = io_end(connfd, key);
 
-    io_disconnect(connfd);
+    if (priv->type == storage_unix_temp) {
+        io_disconnect(connfd);
+    } else {
+        pthread_mutex_unlock(&priv->mutex);
+    }
     return ret;
 }
 
-static int del(const char *target, const char *key) {
+static int del(priv_t *priv, const char *key) {
     int ret    = 0;
     int connfd = -1;
 
-    ret = io_connect(target, &connfd);
-    if (ret) return ret;
+    if (priv->type == storage_unix_temp) {
+        ret = io_connect(priv->target, &connfd);
+        if (ret) return ret;
+    } else {
+        connfd = priv->connfd;
+        pthread_mutex_lock(&priv->mutex);
+    }
 
     io_begin(connfd, _io_del, key, NULL);
     ret = io_end(connfd, key);
 
-    io_disconnect(connfd);
+    if (priv->type == storage_unix_temp) {
+        io_disconnect(connfd);
+    } else {
+        pthread_mutex_unlock(&priv->mutex);
+    }
     return ret;
 }
 
-int constructor_unix(storage_ctx_t *ctx, const char *target) {
+static void destructor(priv_t *priv) {
+    if (priv->type == storage_unix_long) {
+        io_disconnect(priv->connfd);
+        pthread_mutex_destroy(&priv->mutex);
+    }
+    free(priv);
+}
+
+int constructor_unix(storage_ctx_t *ctx, storage_unix_t type, const char *target) {
     if (!(ctx->name = strdup(target))) {
         logfE(logFmtHead "fail to allocate name" logFmtErrno, logArgErrno);
-        return errno;
+        return -1;
     }
 
-    if (!(ctx->priv = strdup(target))) {
+    priv_t *priv = (priv_t *)malloc(sizeof(priv_t));
+    if (!priv) {
         logfE(logFmtHead "fail to allocate priv" logFmtErrno, logArgErrno);
-        return errno;
+        free((void *)ctx->name);
+        return -1;
+    }
+    priv->type = type;
+    if (type == storage_unix_temp) {
+        if (!(priv->target = strdup(target))) {
+            logfE(logFmtHead "fail to allocate target" logFmtErrno, logArgErrno);
+            free((void *)ctx->name);
+            free(priv);
+            return -1;
+        }
+    } else if (type == storage_unix_long) {
+        pthread_mutex_init(&priv->mutex, NULL);
+        errno = io_connect(target, &priv->connfd);
+        if (errno) {
+            free((void *)ctx->name);
+            free(priv);
+            return -1;
+        }
+    } else {
+        assert(false);
+        return -1;
     }
 
+    ctx->priv       = priv;
     ctx->get        = (typeof(ctx->get))get;
     ctx->set        = (typeof(ctx->set))set;
     ctx->del        = (typeof(ctx->del))del;
-    ctx->destructor = free;
+    ctx->destructor = (typeof(ctx->destructor))destructor;
     return 0;
 }
 
-static int parse(storage_ctx_t *ctx, const char *name, const char **__attribute__((unused)) args) {
-    return constructor_unix(ctx, name);
+static int parse(storage_ctx_t *ctx, const char *name, const char **args) {
+    const char    *type_s = args[0];
+    storage_unix_t type   = 0;
+
+    if (!type_s[0]) type = storage_unix_temp;
+    else if (!strcmp(type_s, "temp")) type = storage_unix_temp;
+    else if (!strcmp(type_s, "long")) type = storage_unix_long;
+    else {
+        errno = EINVAL;
+        return -1;
+    }
+
+    return constructor_unix(ctx, type, name);
 }
 
 storage_parseConfig_t unix_parseConfig = {
     .name    = "unix",
-    .argName = "",
-    .note    = "注册类型为unix的本地IO（与通过--children注册不同的是：不需要child具有ctrl server，且不支持“立即缓存”）",
-    .argNum  = 0,
+    .argName = "[<TYPE>],",
+    .note    = "注册类型为unix的本地IO（与通过--children注册不同的是：不需要child具有ctrl "
+               "server，且不支持“立即缓存”）。TYPE取值temp,long",
+    .argNum  = 1,
     .parse   = parse,
 };
