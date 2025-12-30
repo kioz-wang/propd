@@ -56,7 +56,7 @@ static int file_get(const char *root, const char *key, const value_t **value, ti
         ret = EIO;
         goto exit;
     }
-    _value = (value_t *)malloc(sizeof(value_t) + value_head.length);
+    _value = malloc(sizeof(value_t) + value_head.length);
     if (!_value) {
         logfE(logFmtHead "get " logFmtKey " but fail to allocate value with length %d" logFmtErrno, key,
               value_head.length, logArgErrno);
@@ -123,6 +123,7 @@ int constructor_file(storage_ctx_t *ctx, const char *name, const char *dir) {
     }
     if (!(ctx->priv = strdup(dir))) {
         logfE(logFmtHead "fail to allocate priv" logFmtErrno, logArgErrno);
+        free((void *)ctx->name);
         return errno;
     }
 
@@ -140,7 +141,7 @@ static int parse(storage_ctx_t *ctx, const char *name, const char **args) {
 storage_parseConfig_t file_parseConfig = {
     .name    = "file",
     .argName = "<DIR>,",
-    .note    = "注册类型为file的本地IO。DIR是file IO的根目录",
+    .note    = "注册类型为file的存储。DIR是其根目录",
     .argNum  = 1,
     .parse   = parse,
 };

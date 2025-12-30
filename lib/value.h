@@ -84,7 +84,7 @@ static inline value_t *value_double(double n) { return _value_alloc(_value_doubl
  * @brief
  *
  * @param value
- * @return value_t* On error, return NULL and set errno
+ * @return value_t* On error, return NULL and set errno (ENOMEM)
  */
 static inline value_t *value_dup(const value_t *value) { return _value_alloc(value->type, value->length, value->data); }
 
@@ -106,7 +106,7 @@ static inline _value_to(double, double);
  * @brief Parse and allocate a value from a cstring
  *
  * @param str
- * @return value_t* On error, return NULL and set errno
+ * @return value_t* On error, return NULL and set errno (ENOMEM EINVAL)
  */
 value_t *value_parse(const char *str);
 /**

@@ -37,7 +37,7 @@
 #include <sys/queue.h>
 
 struct route_item {
-    storage_ctx_t storage_ctx; /* dont change! see `route_deref` */
+    storage_ctx_t storage; /* Note: cannot be a pointer, see `route_deref` */
     const char  **prefix;
     atomic_int    nref;
     LIST_ENTRY(route_item) entry;
@@ -49,16 +49,16 @@ LIST_HEAD(route_list, route_item);
 /**
  * @brief Allocate and initialize an item of route
  *
- * @param storage_ctx
+ * @param storage
  * @param num_prefix (ref. length of arraydup_cstring)
  * @param prefix (ref. array of arraydup_cstring)
  * @return route_item_t* On error, return NULL and set errno
  */
-route_item_t *route_item_create(const storage_ctx_t *storage_ctx, uint32_t num_prefix, const char *prefix[]);
+route_item_t *route_item_create(const storage_ctx_t *storage, uint32_t num_prefix, const char *prefix[]);
 /**
  * @brief Release an item of route
  *
- * @param item （可以传入NULL）
+ * @param item maybe null
  */
 void route_item_destroy(route_item_t *item);
 
@@ -71,7 +71,7 @@ void *route_create(void);
 /**
  * @brief Release a route
  *
- * @param route 路由表对象（可以传入NULL）
+ * @param route 路由表对象 (maybe null)
  */
 void route_destroy(void *route);
 /**
@@ -82,22 +82,23 @@ void route_destroy(void *route);
  */
 void route_init(void *route, struct route_list list);
 
+int __route_register(struct route_list *list, const storage_ctx_t *storage, uint32_t num_prefix, const char *prefix[]);
 /**
  * @brief Register a route item
  *
  * @param route 路由表对象
- * @param storage_ctx
+ * @param storage
  * @param num_prefix (ref. length of arraydup_cstring)
  * @param prefix (ref. array of arraydup_cstring)
- * @return int errno
+ * @return int errno (EEXIST ENOMEM)
  */
-int route_register(void *route, const storage_ctx_t *storage_ctx, uint32_t num_prefix, const char *prefix[]);
+int route_register(void *route, const storage_ctx_t *storage, uint32_t num_prefix, const char *prefix[]);
 /**
- * @brief Unregister a route item by name
+ * @brief Unregister a route item by name（如果表项仍被引用，则无法注销）
  *
  * @param route 路由表对象
- * @param name 路由表项的名称。传入NULL时，注销首个表项
- * @return int errno
+ * @param name 路由表项的名称。传入NULL时，注销所有表项
+ * @return int errno (ENOENT EBUSY)
  */
 int route_unregister(void *route, const char *name);
 /**
@@ -105,17 +106,17 @@ int route_unregister(void *route, const char *name);
  *
  * @param route 路由表对象
  * @param key
- * @param storage_ctx
- * @return int errno
+ * @param storage 返回存储上下文，并增加该表项的引用计数
+ * @return int errno (ENOENT)
  */
-int route_match(void *route, const char *key, const storage_ctx_t **storage_ctx);
+int route_match(void *route, const char *key, const storage_ctx_t **storage);
 
 /**
- * @brief
+ * @brief 减少存储上下文所在表项的引用计数
  *
  * @param route
- * @param storage_ctx
+ * @param storage
  */
-void route_deref(const storage_ctx_t *storage_ctx);
+void route_deref(const storage_ctx_t *storage);
 
 #endif /* __PROPD_ROUTE_H */

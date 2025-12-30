@@ -47,6 +47,7 @@ struct priv {
 typedef struct priv priv_t;
 
 static void memory_deinit(priv_t *priv) {
+    /* TODO */
     munmap(priv->base, layout_length(priv->layout));
     layout_destroy((pos_t *)priv->layout);
     free(priv);
@@ -58,7 +59,7 @@ static int memory_get(const priv_t *priv, const char *key, const value_t **value
         return ENOENT;
     }
 
-    value_t *_value = (value_t *)malloc(sizeof(value_t) + pos->length);
+    value_t *_value = malloc(sizeof(value_t) + pos->length);
     if (!_value) {
         return errno;
     }
@@ -68,7 +69,6 @@ static int memory_get(const priv_t *priv, const char *key, const value_t **value
     _value->type   = pos->length > sizeof(uint32_t) ? _value_data : _value_u32;
     *value         = _value;
     *duration      = DURATION_INF;
-
     return 0;
 }
 
@@ -78,47 +78,58 @@ int constructor_memory(storage_ctx_t *ctx, const char *name, long phy, const voi
         return errno;
     }
 
-    int fd = open("/dev/mem", O_RDWR | O_SYNC);
-    if (fd == -1) {
-        logfE(logFmtHead "fail to open /dev/mem" logFmtErrno, logArgErrno);
-        return EIO;
-    }
-    uint32_t len  = layout_length(layout);
-    void    *base = mmap(0, len, PROT_READ, MAP_SHARED, fd, phy);
-    close(fd);
-    if (!base) {
-        logfE(logFmtHead "fail to mmap(%lx,%x)" logFmtErrno, phy, len, logArgErrno);
+    priv_t *priv = malloc(sizeof(priv_t));
+    if (!priv) {
+        logfE(logFmtHead "fail to allocate priv" logFmtErrno, logArgErrno);
+        free((void *)ctx->name);
         return errno;
     }
 
-    priv_t *priv = (priv_t *)malloc(sizeof(priv_t));
-    if (!priv) {
-        logfE(logFmtHead "fail to allocate priv" logFmtErrno, logArgErrno);
+    int fd = open("/dev/mem", O_RDWR | O_SYNC);
+    if (fd == -1) {
+        logfE(logFmtHead "fail to open /dev/mem" logFmtErrno, logArgErrno);
+        free(priv);
+        free((void *)ctx->name);
+        return EIO;
+    }
+    /* TODO propd_mmap/munmap */
+    uint32_t len = layout_length(layout);
+    priv->base   = mmap(0, len, PROT_READ, MAP_SHARED, fd, phy);
+    close(fd);
+    if (!priv->base) {
+        logfE(logFmtHead "fail to mmap(%lx,%x)" logFmtErrno, phy, len, logArgErrno);
+        free(priv);
+        free((void *)ctx->name);
         return errno;
     }
-    priv->base   = base;
     priv->layout = layout;
 
     ctx->priv       = priv;
     ctx->get        = (typeof(ctx->get))memory_get;
+    ctx->set        = NULL;
+    ctx->del        = NULL;
     ctx->destructor = (typeof(ctx->destructor))memory_deinit;
     return 0;
 }
 
 static int parse(storage_ctx_t *ctx, const char *name, const char **args) {
+    int    ret    = 0;
     long   phy    = strtoul(args[0], NULL, 16);
     pos_t *layout = layout_parse(args[1]);
     if (!layout) {
-        errno = EINVAL;
         return EINVAL;
     }
-    return constructor_memory(ctx, name, phy, layout);
+    ret = constructor_memory(ctx, name, phy, layout);
+    if (ret) {
+        layout_destroy(layout);
+    }
+    return ret;
 }
 
 storage_parseConfig_t memory_parseConfig = {
     .name    = "memory",
     .argName = "<PHY>,<LAYOUT>,",
-    .note    = "注册类型为memory的本地IO。PHY是memory IO需要映射的内存地址，LAYOUT是描述内存布局的json文件",
+    .note    = "注册类型为memory的存储。PHY是内存地址，LAYOUT是描述内存布局的json文件",
     .argNum  = 2,
     .parse   = parse,
 };

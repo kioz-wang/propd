@@ -154,7 +154,8 @@ static int worker(worker_arg_t *arg) {
             logfV(logFmtHead "<<<%d disconnect", connfd);
             break;
         }
-        logfD(logFmtHead logFmtKey " <<<%d recv header of package with type %d", pkg_head.key, connfd, pkg_head.type);
+        logfD(logFmtHead logFmtKey " <<<%d recv header of package with type %d, created at %lxms", pkg_head.key, connfd,
+              pkg_head.type, timestamp_to_ms(pkg_head.created));
 
         switch (pkg_head.type) {
         case _io_get:
@@ -256,7 +257,7 @@ int start_io_server(const char *name, void *thread_pool, const void *credbook, c
         logfE(logFmtHead "fail to bind %s" logFmtErrno, servaddr->sun_path, logArgErrno);
         goto exit_listenfd;
     }
-    ret = listen(ctx->sockfd, 5);
+    ret = listen(ctx->sockfd, 5); /* TODO why 5? */
     if (ret) {
         logfE(logFmtHead "fail to listen at %s" logFmtErrno, servaddr->sun_path, logArgErrno);
         goto exit_sun_path;

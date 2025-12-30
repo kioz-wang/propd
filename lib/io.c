@@ -37,21 +37,20 @@
 #include <errno.h>
 
 struct cleanup_ctx {
-    const io_ctx_t       *io;
-    const storage_ctx_t **storage;
-    const char          **key;
+    void                *nmtx_ns;
+    const storage_ctx_t *storage;
+    const char          *key;
 };
 typedef struct cleanup_ctx cleanup_ctx_t;
 
 static void cleanup(cleanup_ctx_t *ctx) {
-    if (ctx->key) named_mutex_unlock(ctx->io->nmtx_ns, *ctx->key);
-    if (ctx->storage) route_deref(*ctx->storage);
+    if (ctx->key) named_mutex_unlock(ctx->nmtx_ns, ctx->key);
+    if (ctx->storage) route_deref(ctx->storage);
 }
 
 int io_get(const io_ctx_t *io, const char *key, const value_t **value, timestamp_t *duration) {
-    int                  ret         = 0;
-    const storage_ctx_t *storage     = NULL;
-    cleanup_ctx_t        cleanup_ctx = {.io = io};
+    int           ret         = 0;
+    cleanup_ctx_t cleanup_ctx = {.nmtx_ns = io->nmtx_ns};
 
     if (io->cache) {
         ret = cache_get(io->cache, key, value, duration);
@@ -60,18 +59,17 @@ int io_get(const io_ctx_t *io, const char *key, const value_t **value, timestamp
 
     pthread_cleanup_push((void (*)(void *))cleanup, &cleanup_ctx);
 
-    ret = route_match(io->route, key, &storage);
+    ret = route_match(io->route, key, &cleanup_ctx.storage);
     if (ret) goto exit;
-    cleanup_ctx.storage = &storage;
 
     ret = named_mutex_lock(io->nmtx_ns, key);
     if (ret) {
         logfE("[server::?] fail to lock " logFmtKey " to get" logFmtRet, key, ret);
         goto exit;
     }
-    cleanup_ctx.key = &key;
+    cleanup_ctx.key = key;
 
-    ret = storage_get(storage, key, value, duration);
+    ret = storage_get(cleanup_ctx.storage, key, value, duration);
     if (!ret) {
         if (io->cache) cache_set(io->cache, key, *value, *duration);
     }
@@ -85,7 +83,7 @@ int io_update(const io_ctx_t *io, const char *key, const storage_ctx_t *storage)
     int            ret   = 0;
     const value_t *value = NULL;
     timestamp_t    duration;
-    cleanup_ctx_t  cleanup_ctx = {.io = io};
+    cleanup_ctx_t  cleanup_ctx = {.nmtx_ns = io->nmtx_ns};
 
     if (!io->cache) return 0;
 
@@ -96,7 +94,7 @@ int io_update(const io_ctx_t *io, const char *key, const storage_ctx_t *storage)
         logfE("[server::?] fail to lock " logFmtKey " to update" logFmtRet, key, ret);
         goto exit;
     }
-    cleanup_ctx.key = &key;
+    cleanup_ctx.key = key;
 
     ret = storage_get(storage, key, &value, &duration);
     if (!ret) {
@@ -109,24 +107,22 @@ exit:
 }
 
 int io_set(const io_ctx_t *io, const char *key, const value_t *value) {
-    int                  ret         = 0;
-    const storage_ctx_t *storage     = NULL;
-    cleanup_ctx_t        cleanup_ctx = {.io = io};
+    int           ret         = 0;
+    cleanup_ctx_t cleanup_ctx = {.nmtx_ns = io->nmtx_ns};
 
     pthread_cleanup_push((void (*)(void *))cleanup, &cleanup_ctx);
 
-    ret = route_match(io->route, key, &storage);
+    ret = route_match(io->route, key, &cleanup_ctx.storage);
     if (ret) goto exit;
-    cleanup_ctx.storage = &storage;
 
     ret = named_mutex_lock(io->nmtx_ns, key);
     if (ret) {
         logfE("[server::?] fail to lock " logFmtKey " to set" logFmtRet, key, ret);
         goto exit;
     }
-    cleanup_ctx.key = &key;
+    cleanup_ctx.key = key;
 
-    ret = storage_set(storage, key, value);
+    ret = storage_set(cleanup_ctx.storage, key, value);
     if (!ret) {
         if (io->cache) cache_set(io->cache, key, value, 0);
     }
@@ -137,24 +133,22 @@ exit:
 }
 
 int io_del(const io_ctx_t *io, const char *key) {
-    int                  ret         = 0;
-    const storage_ctx_t *storage     = NULL;
-    cleanup_ctx_t        cleanup_ctx = {.io = io};
+    int           ret         = 0;
+    cleanup_ctx_t cleanup_ctx = {.nmtx_ns = io->nmtx_ns};
 
     pthread_cleanup_push((void (*)(void *))cleanup, &cleanup_ctx);
 
-    ret = route_match(io->route, key, &storage);
+    ret = route_match(io->route, key, &cleanup_ctx.storage);
     if (ret) goto exit;
-    cleanup_ctx.storage = &storage;
 
     ret = named_mutex_lock(io->nmtx_ns, key);
     if (ret) {
         logfE("[server::?] fail to lock " logFmtKey " to del" logFmtRet, key, ret);
         goto exit;
     }
-    cleanup_ctx.key = &key;
+    cleanup_ctx.key = key;
 
-    ret = storage_del(storage, key);
+    ret = storage_del(cleanup_ctx.storage, key);
     if (!ret) {
         if (io->cache) cache_del(io->cache, key);
     }
