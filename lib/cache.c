@@ -225,7 +225,7 @@ int cache_get(void *_cache, const char *key, const value_t **value, timestamp_t 
     }
     *duration = remain;
 
-    char buffer[512] = {0};
+    char buffer[256] = {0};
     char buffer1[32] = {0};
     logfV("[cache] get" logFmtKey " is" logFmtValue " with duration %s", key,
           value_fmt(buffer, sizeof(buffer), *value, false), duration_fmt(buffer1, sizeof(buffer1), remain));
@@ -262,7 +262,7 @@ int cache_set(void *_cache, const char *key, const value_t *value, timestamp_t d
         old_item->duration = _duration;
     }
 
-    char buffer[512] = {0};
+    char buffer[256] = {0};
     char buffer1[32] = {0};
     logfV("[cache] set" logFmtKey " as" logFmtValue " with duration %s", key,
           value_fmt(buffer, sizeof(buffer), value, false), duration_fmt(buffer1, sizeof(buffer1), _duration));
