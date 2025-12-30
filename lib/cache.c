@@ -199,13 +199,13 @@ int cache_get(void *_cache, const char *key, const value_t **value, timestamp_t 
 
     item = RB_FIND(cache_tree, &cache->tree, &shadow);
     if (!item) {
-        logfD("[cache] get" logFmtKey " but not found", key);
+        logfD("[cache] get " logFmtKey " but not found", key);
         ret = ENOENT;
         goto exit;
     }
     timestamp_t now = timestamp(true);
     if (duration_is_outdate(item, now)) {
-        logfD("[cache] get" logFmtKey " but out of date, notice cleaner", key);
+        logfD("[cache] get " logFmtKey " but out of date, notice cleaner", key);
         sem_post(&cache->clean_notice);
         ret = ENOENT;
         goto exit;
@@ -213,7 +213,7 @@ int cache_get(void *_cache, const char *key, const value_t **value, timestamp_t 
 
     *value = value_dup(item->value);
     if (!*value) {
-        logfE("[cache] get" logFmtKey " but fail to allocate value" logFmtErrno, key, logArgErrno);
+        logfE("[cache] get " logFmtKey " but fail to allocate value" logFmtErrno, key, logArgErrno);
         ret = errno;
         goto exit;
     }
@@ -227,7 +227,7 @@ int cache_get(void *_cache, const char *key, const value_t **value, timestamp_t 
 
     char buffer[256] = {0};
     char buffer1[32] = {0};
-    logfV("[cache] get" logFmtKey " is" logFmtValue " with duration %s", key,
+    logfV("[cache] get " logFmtKey " is " logFmtValue " with duration %s", key,
           value_fmt(buffer, sizeof(buffer), *value, false), duration_fmt(buffer1, sizeof(buffer1), remain));
 
 exit:
@@ -241,7 +241,7 @@ int cache_set(void *_cache, const char *key, const value_t *value, timestamp_t d
         duration ? (duration < cache->min_duration ? cache->min_duration : duration) : cache->default_duration;
     cache_item_t *item = item_create(key, value, _duration);
     if (!item) {
-        logfE("[cache] set" logFmtKey " but fail to allocate item" logFmtErrno, key, logArgErrno);
+        logfE("[cache] set " logFmtKey " but fail to allocate item" logFmtErrno, key, logArgErrno);
         return errno;
     }
     int ret = 0;
@@ -254,7 +254,7 @@ int cache_set(void *_cache, const char *key, const value_t *value, timestamp_t d
         free((void *)old_item->value);
         old_item->value = value_dup(value);
         if (!old_item->value) {
-            logfE("[cache] set" logFmtKey " but fail to allocate value" logFmtErrno, key, logArgErrno);
+            logfE("[cache] set " logFmtKey " but fail to allocate value" logFmtErrno, key, logArgErrno);
             ret = errno;
             goto exit;
         }
@@ -264,7 +264,7 @@ int cache_set(void *_cache, const char *key, const value_t *value, timestamp_t d
 
     char buffer[256] = {0};
     char buffer1[32] = {0};
-    logfV("[cache] set" logFmtKey " as" logFmtValue " with duration %s", key,
+    logfV("[cache] set " logFmtKey " as " logFmtValue " with duration %s", key,
           value_fmt(buffer, sizeof(buffer), value, false), duration_fmt(buffer1, sizeof(buffer1), _duration));
 
 exit:
@@ -282,14 +282,14 @@ int cache_del(void *_cache, const char *key) {
 
     item = RB_FIND(cache_tree, &cache->tree, &shadow);
     if (!item) {
-        logfD("[cache] del" logFmtKey " but not found", key);
+        logfD("[cache] del " logFmtKey " but not found", key);
         ret = ENOENT;
         goto exit;
     }
     RB_REMOVE(cache_tree, &cache->tree, item);
     item_destroy(item);
 
-    logfV("[cache] del" logFmtKey, key);
+    logfV("[cache] del " logFmtKey, key);
 
 exit:
     pthread_rwlock_unlock(&cache->rwlock);

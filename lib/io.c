@@ -66,7 +66,7 @@ int io_get(const io_ctx_t *io, const char *key, const value_t **value, timestamp
 
     ret = named_mutex_lock(io->nmtx_ns, key);
     if (ret) {
-        logfE("[server::?] fail to lock" logFmtKey " to get" logFmtRet, key, ret);
+        logfE("[server::?] fail to lock " logFmtKey " to get" logFmtRet, key, ret);
         goto exit;
     }
     cleanup_ctx.key = &key;
@@ -93,7 +93,7 @@ int io_update(const io_ctx_t *io, const char *key, const storage_ctx_t *storage)
 
     ret = named_mutex_lock(io->nmtx_ns, key);
     if (ret) {
-        logfE("[server::?] fail to lock" logFmtKey " to update" logFmtRet, key, ret);
+        logfE("[server::?] fail to lock " logFmtKey " to update" logFmtRet, key, ret);
         goto exit;
     }
     cleanup_ctx.key = &key;
@@ -121,7 +121,7 @@ int io_set(const io_ctx_t *io, const char *key, const value_t *value) {
 
     ret = named_mutex_lock(io->nmtx_ns, key);
     if (ret) {
-        logfE("[server::?] fail to lock" logFmtKey " to set" logFmtRet, key, ret);
+        logfE("[server::?] fail to lock " logFmtKey " to set" logFmtRet, key, ret);
         goto exit;
     }
     cleanup_ctx.key = &key;
@@ -149,7 +149,7 @@ int io_del(const io_ctx_t *io, const char *key) {
 
     ret = named_mutex_lock(io->nmtx_ns, key);
     if (ret) {
-        logfE("[server::?] fail to lock" logFmtKey " to del" logFmtRet, key, ret);
+        logfE("[server::?] fail to lock " logFmtKey " to del" logFmtRet, key, ret);
         goto exit;
     }
     cleanup_ctx.key = &key;
