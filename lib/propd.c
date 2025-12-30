@@ -410,8 +410,8 @@ static int __propd_run(const propd_config_t *config, int *syncfd) {
         signal(SIGINT, nop);
         signal(SIGTERM, nop);
         pause();
-        logfI(logFmtHead "clean up", name);
-        attach_wait(NULL, '.', 2);
+        attach_wait("propd_attach.cleanup", '.', 2);
+        logfI(logFmtHead "cleanup", name);
     }
 
     if (syncfd && ret) {

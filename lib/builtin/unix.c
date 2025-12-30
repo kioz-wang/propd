@@ -253,7 +253,9 @@ static int del(priv_t *priv, const char *key) {
 }
 
 static void destructor(priv_t *priv) {
-    if (priv->type == storage_unix_long) {
+    if (priv->type == storage_unix_temp) {
+        free((void *)priv->target);
+    } else {
         io_disconnect(priv->connfd);
         pthread_mutex_destroy(&priv->mutex);
     }

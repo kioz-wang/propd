@@ -162,8 +162,8 @@ const char *hexmem(char *buffer, size_t b, void *memory, size_t m, bool upper) {
         return buffer;
     }
 
-    buffer[--b] = '\0';
-    char *ptr   = buffer;
+    --b;
+    char *ptr = buffer;
 
     size_t c /* capacity */ = b / 2;
 
@@ -178,11 +178,12 @@ const char *hexmem(char *buffer, size_t b, void *memory, size_t m, bool upper) {
 
     if (c < 3) {
         memset(buffer, '.', b);
+        buffer[b] = '\0';
         return buffer;
     }
 
     /* m > c >= 3 */
-    size_t d /* delta */ = m - c - 1;
+    size_t d /* delta */ = m - c + 1;
     size_t left          = (m - d) / 2;
     size_t right         = (m + d) / 2;
     for (size_t i = 0; i < left; i++) {
@@ -195,6 +196,7 @@ const char *hexmem(char *buffer, size_t b, void *memory, size_t m, bool upper) {
         *ptr++ = dec2hexchar(((uint8_t *)memory)[i] >> 4, upper);
         *ptr++ = dec2hexchar(((uint8_t *)memory)[i] & 0xf, upper);
     }
+    *ptr = '\0';
     return buffer;
 }
 
@@ -255,14 +257,16 @@ void attach_wait(const char *envname, char c, int unit) {
 
 #include <ctype.h>
 static void TEST_random_alnum(void) {
-    char buffer[64];
-    random_alnum(buffer, sizeof(buffer));
-    fprintf(stderr, "%*s\n", (int)sizeof(buffer), buffer);
-    for (size_t i = 0; i < sizeof(buffer); i++)
+    fprintf(stderr, "\n %s\n\n", __func__);
+    char buffer[64 + 1] = {0};
+    random_alnum(buffer, sizeof(buffer) - 1);
+    fprintf(stderr, "%s\n", buffer);
+    for (size_t i = 0; i < sizeof(buffer) - 1; i++)
         assert(isalnum(buffer[i]));
 }
 
 static void TEST_cstring_array(void) {
+    fprintf(stderr, "\n %s\n\n", __func__);
     char         buffer0[64];
     char         buffer1[sizeof(buffer0)];
     const char  *cstring[] = {"hello", "world", "", "abc,def", "", NULL};
@@ -284,11 +288,48 @@ static void TEST_cstring_array(void) {
     arrayfree_cstring(parsed);
 }
 
+static void TEST_hexmem(void) {
+    fprintf(stderr, "\n %s\n\n", __func__);
+    char        buffer0[16];
+    char        buffer1[sizeof(buffer0)];
+    const char *hex_str0 = "12345678901234567890abff";
+    const char *hex_str1 = "12345678901234567890abcdefaabbccddeeff";
+
+    assert(!hex2mem(buffer0, &(size_t){sizeof(buffer0)}, hex_str1));
+    size_t hex0_len = sizeof(buffer0);
+    hex2mem(buffer0, &hex0_len, hex_str0);
+    assert(12 == hex0_len);
+
+    assert(!strcmp("", hexmem(buffer1, sizeof(buffer1), NULL, 0, false)));
+    random_alnum(buffer1, sizeof(buffer1));
+    assert(!strcmp("1234567890", hexmem(buffer1, sizeof(buffer1), buffer0, 5, false)));
+    random_alnum(buffer1, sizeof(buffer1));
+    assert(!strcmp("12345678901234", hexmem(buffer1, sizeof(buffer1), buffer0, 7, false)));
+    random_alnum(buffer1, sizeof(buffer1));
+    assert(!strcmp("123456..123456", hexmem(buffer1, sizeof(buffer1), buffer0, 8, false)));
+    random_alnum(buffer1, sizeof(buffer1));
+    assert(!strcmp("123456..90abff", hexmem(buffer1, sizeof(buffer1), buffer0, hex0_len, false)));
+    random_alnum(buffer1, sizeof(buffer1));
+    assert(!strcmp(".....", hexmem(buffer1, 6, buffer0, hex0_len, false)));
+    random_alnum(buffer1, sizeof(buffer1));
+    assert(!strcmp("....", hexmem(buffer1, 5, buffer0, hex0_len, false)));
+    random_alnum(buffer1, sizeof(buffer1));
+    assert(!strcmp("...", hexmem(buffer1, 4, buffer0, hex0_len, false)));
+    random_alnum(buffer1, sizeof(buffer1));
+    assert(!strcmp("..", hexmem(buffer1, 3, buffer0, hex0_len, false)));
+    random_alnum(buffer1, sizeof(buffer1));
+    assert(!strcmp(".", hexmem(buffer1, 2, buffer0, hex0_len, false)));
+    random_alnum(buffer1, sizeof(buffer1));
+    assert(!strcmp("", hexmem(buffer1, 1, buffer0, hex0_len, false)));
+}
+
 int main(int argc, char *argv[]) {
     for (int i = 0; i < 100; i++)
         TEST_random_alnum();
 
     TEST_cstring_array();
+
+    TEST_hexmem();
 }
 
 #endif /* __TEST_MISC */

@@ -106,10 +106,8 @@ void route_init(void *_route, struct route_list list) {
 }
 
 int route_register(void *_route, const storage_ctx_t *storage_ctx, uint32_t num_prefix, const char *prefix[]) {
-    route_t      *route = _route;
-    int           ret   = 0;
-    route_item_t *item  = route_item_create(storage_ctx, num_prefix, prefix);
-    if (!item) return errno;
+    route_t *route = _route;
+    int      ret   = 0;
 
     pthread_rwlock_wrlock(&route->rwlock);
 
@@ -122,12 +120,18 @@ int route_register(void *_route, const storage_ctx_t *storage_ctx, uint32_t num_
         }
     }
 
+    route_item_t *item = route_item_create(storage_ctx, num_prefix, prefix);
+    if (!item) {
+        logfE("[route] register %s but fail to create item", storage_ctx->name);
+        ret = errno;
+        goto exit;
+    }
+
     LIST_INSERT_HEAD(&route->list, item, entry);
     logfI("[route] register %s", storage_ctx->name);
 
 exit:
     pthread_rwlock_unlock(&route->rwlock);
-    if (ret) route_item_destroy(item);
     return ret;
 }
 

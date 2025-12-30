@@ -31,6 +31,7 @@
 #include "builtin/builtin.h"
 #include "ctrl_server.h"
 #include "global.h"
+#include "misc.h"
 #include "storage.h"
 #include <getopt.h>
 #include <stdio.h>
@@ -167,6 +168,7 @@ int main(int argc, char *argv[]) {
     argv += optind;
 
     if (argc) { /* prop {command} [...] */
+        attach_wait("prop_attach", '.', 2);
         if (!strcmp(argv[0], "ctrl")) {
             return command_ctrl(argc, argv);
         } else if (!strcmp(argv[0], "get")) {

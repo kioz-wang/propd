@@ -117,25 +117,33 @@ static task_t task_queue_pop(task_queue_t *queue) {
     return task;
 }
 
+static void cleanup(void *dummy) {
+    (void)dummy;
+    logfD("[thread_pool] cleanup a thread");
+}
+
 static void *thread_pool_worker(task_queue_t *queue) {
+    pthread_cleanup_push(cleanup, NULL);
     while (true) {
         task_t task = task_queue_pop(queue);
         logfD("[thread_pool] task%d@%lx running", task._id, task.created);
 
         int result = task.routine(task.arg);
-        logfD("[thread_pool] task%d@%lx done with result %d", task._id, task.created, result);
+        if (result) logfE("[thread_pool] task%d@%lx done with result %d", task._id, task.created, result);
+        else logfD("[thread_pool] task%d@%lx done", task._id, task.created);
 
         if (task.result) {
             *task.result = result;
             sem_post(task.done);
         }
     }
+    pthread_cleanup_pop(false);
     return NULL;
 }
 
 struct thread_pool {
     unsigned short num;
-    void          *pool;
+    pthread_t     *pool;
     void          *task_queue;
 };
 typedef struct thread_pool thread_pool_t;
@@ -156,11 +164,11 @@ void *thread_pool_create(unsigned short thread_num, unsigned short min_if_auto, 
         logfV("[thread_pool] select %d as task_num automatically", task_num);
     }
 
-    thread_pool_t *tpool = (thread_pool_t *)calloc(1, sizeof(thread_pool_t));
+    thread_pool_t *tpool = calloc(1, sizeof(thread_pool_t));
     if (!tpool) goto exit;
-    tpool->pool = (pthread_t *)calloc(thread_num, sizeof(pthread_t));
+    tpool->pool = calloc(thread_num, sizeof(pthread_t));
     if (!tpool->pool) goto exit;
-    tpool->task_queue = (task_queue_t *)calloc(1, sizeof(task_queue_t));
+    tpool->task_queue = calloc(1, sizeof(task_queue_t));
     if (!tpool->task_queue) {
         goto exit;
     }
@@ -168,14 +176,14 @@ void *thread_pool_create(unsigned short thread_num, unsigned short min_if_auto, 
     if (ret) goto exit;
 
     for (int i = 0; i < thread_num; i++) {
-        ret = pthread_create(&((pthread_t *)tpool->pool)[i], NULL, (void *(*)(void *))thread_pool_worker,
-                             tpool->task_queue);
+        ret = pthread_create(&tpool->pool[i], NULL, (void *(*)(void *))thread_pool_worker, tpool->task_queue);
         if (ret) {
             tpool->num = i;
             errno      = ret;
             logfE("[thread_pool] fail to create thread[%d] (%d)", i, ret);
             goto exit;
         }
+        pthread_detach(tpool->pool[i]);
     }
     tpool->num = thread_num;
 
@@ -192,7 +200,7 @@ void thread_pool_destroy(void *_tpool) {
     if (!tpool) return;
 
     for (int i = 0; i < tpool->num; i++) {
-        pthread_cancel(((pthread_t *)tpool->pool)[i]);
+        pthread_cancel(tpool->pool[i]);
     }
     tpool->num = 0;
 

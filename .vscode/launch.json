@@ -46,6 +46,17 @@
             "env": {
                 "LD_LIBRARY_PATH": "${workspaceRoot}/build/lib",
             }
+        },
+        {
+            "name": "Launch test",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceRoot}/build/bin/test",
+            "args": [],
+            "cwd": "${workspaceRoot}",
+            "env": {
+                "LD_LIBRARY_PATH": "${workspaceRoot}/build/lib",
+            }
         }
     ]
 }

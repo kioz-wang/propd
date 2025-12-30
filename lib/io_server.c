@@ -67,31 +67,39 @@ static int get(const worker_arg_t *arg, int connfd, const char *key) {
 
     ret = cred_check(arg->credbook, &arg->cred, _io_get, key);
 
-    if (ret == 0) {
+    if (!ret) {
         ret = io_get(arg->io_ctx, key, &value, &duration);
     }
 
-    n = send(connfd, &duration, sizeof(duration), 0);
-    assert(n == sizeof(duration)); /* TODO pthread_exit */
+    n = send(connfd, &duration, sizeof(duration), MSG_NOSIGNAL);
+    if (n != sizeof(duration)) goto exit;
     logfD(logFmtHead logFmtKey " >>>%d send duration %ld", key, connfd, duration);
-    if (ret == 0) {
-        n = send(connfd, value, sizeof(value_t) + value->length, 0);
-        assert(n == sizeof(value_t) + value->length); /* TODO pthread_exit */
+
+    if (!ret) {
+        n = send(connfd, value, sizeof(value_t) + value->length, MSG_NOSIGNAL);
+        if (n != sizeof(value_t) + value->length) goto exit;
         logfD(logFmtHead logFmtKey " >>>%d send value with type %d length %d", key, connfd, value->type, value->length);
-        free((void *)value);
     } else {
         value_t undef = {.type = _value_undef, .length = 0};
-        n             = send(connfd, &undef, sizeof(undef), 0);
-        assert(n == sizeof(undef)); /* TODO pthread_exit */
+        n             = send(connfd, &undef, sizeof(undef), MSG_NOSIGNAL);
+        if (n != sizeof(undef)) goto exit;
         logfD(logFmtHead logFmtKey " >>>%d send undef value", key, connfd);
     }
+
+    free((void *)value);
     return ret;
+
+exit:
+    free((void *)value);
+    return EIO;
 }
 
 static int set(const worker_arg_t *arg, int connfd, const char *key, const value_t *value_head) {
     int      ret = 0;
     ssize_t  n;
-    value_t *value = (value_t *)malloc(sizeof(value_t) + value_head->length);
+    value_t *value = NULL;
+
+    value = malloc(sizeof(value_t) + value_head->length);
     if (!value) {
         logfE(logFmtHead logFmtKey " <<<%d no memory to recv data of value, discard it", key, connfd);
         unix_stream_discard(connfd);
@@ -100,15 +108,21 @@ static int set(const worker_arg_t *arg, int connfd, const char *key, const value
 
     memcpy(value, value_head, sizeof(value_t));
     n = recv(connfd, value->data, value->length, 0);
-    assert(n == value->length); /* TODO pthread_exit */
+    if (n != value->length) goto exit;
     logfD(logFmtHead logFmtKey " <<<%d recv data of value with length %d", key, connfd, value->length);
 
     ret = cred_check(arg->credbook, &arg->cred, _io_set, key);
 
-    if (ret == 0) {
+    if (!ret) {
         ret = io_set(arg->io_ctx, key, value);
     }
+
+    free((void *)value);
     return ret;
+
+exit:
+    free((void *)value);
+    return EIO;
 }
 
 static int del(const worker_arg_t *arg, const char *key) {
@@ -116,23 +130,15 @@ static int del(const worker_arg_t *arg, const char *key) {
 
     ret = cred_check(arg->credbook, &arg->cred, _io_del, key);
 
-    if (ret == 0) {
+    if (!ret) {
         ret = io_del(arg->io_ctx, key);
     }
     return ret;
 }
 
-static void worker_cleanup(worker_arg_t *arg) {
-    logfD(logFmtHead "cleanup worker");
-    close(arg->connfd);
-    free(arg);
-}
-
 static int worker(worker_arg_t *arg) {
     int ret    = 0;
     int connfd = arg->connfd;
-
-    pthread_cleanup_push((void (*)(void *))worker_cleanup, arg);
 
     for (;;) {
         io_package_t pkg_head;
@@ -162,12 +168,16 @@ static int worker(worker_arg_t *arg) {
             break;
         }
 
-        n = send(connfd, &result, sizeof(result), 0);
-        assert(n == sizeof(result)); /* TODO pthread_exit */
+        n = send(connfd, &result, sizeof(result), MSG_NOSIGNAL);
+        if (n != sizeof(result)) {
+            ret = EIO;
+            break;
+        }
         logfD(logFmtHead logFmtKey " >>>%d send result" logFmtRet, pkg_head.key, connfd, result);
     }
 
-    pthread_cleanup_pop(true);
+    close(arg->connfd);
+    free(arg);
     return ret;
 }
 
@@ -202,6 +212,7 @@ static void *server(ctx_t *ctx) {
         arg->credbook = ctx->credbook;
         arg->io_ctx   = ctx->io_ctx;
 
+        pthread_cleanup_push(free, arg);
         arg->connfd = accept(ctx->sockfd, (struct sockaddr *)&cliaddr, &(socklen_t){sizeof(cliaddr)});
         if (arg->connfd < 0) {
             logfE(logFmtHead "fail to accept" logFmtErrno, logArgErrno);
@@ -209,7 +220,8 @@ static void *server(ctx_t *ctx) {
             if (errno == EINTR) continue;
             break;
         }
-        /* TODO get tid of client */
+        pthread_cleanup_pop(false);
+
         getsockopt(arg->connfd, SOL_SOCKET, SO_PEERCRED, &arg->cred, &(socklen_t){sizeof(arg->cred)});
         logfV(logFmtHead "accept p%d,u%d,g%d path %s as %d", arg->cred.pid, arg->cred.uid, arg->cred.gid,
               cliaddr.sun_path[0] ? cliaddr.sun_path : "?", arg->connfd);

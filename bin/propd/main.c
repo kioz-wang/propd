@@ -29,6 +29,7 @@
  */
 
 #include "builtin/builtin.h"
+#include "misc.h"
 #include "propd.h"
 
 int main(int argc, char *argv[]) {
@@ -39,6 +40,7 @@ int main(int argc, char *argv[]) {
     propd_config_apply_parser(&config, &file_parseConfig);
     propd_config_apply_parser(&config, &unix_parseConfig);
 
+    attach_wait("propd_attach", '.', 2);
     propd_config_parse(&config, argc, argv);
 
     /* TODO register some local storage by code if you want */

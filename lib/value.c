@@ -129,8 +129,8 @@ const char *value_fmt(char *buffer, size_t length, const value_t *value, bool no
     case _value_data: {
         int pos = 0;
         if (!notype) {
-            assert(sizeof("data:") < length);
-            pos = sprintf(buffer, "%s", "data:");
+            assert(sizeof("data[xxxxxxxx]:") < length);
+            pos = sprintf(buffer, "data[%x]:", value->length);
         }
         hexmem(&buffer[pos], length - pos, (void *)value->data, value->length, true);
     } break;

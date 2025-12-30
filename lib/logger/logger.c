@@ -41,7 +41,7 @@
 
 static mlog_level_t g_log_level = MLOG_DEBG;
 
-static void default_logger(const char *msg) { fputs(msg, stdout); }
+static void default_logger(const char *msg) { fputs(msg, stderr); }
 
 static mlogger_f g_logger = default_logger;
 

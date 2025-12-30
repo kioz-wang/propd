@@ -220,6 +220,8 @@ static void *server(ctx_t *ctx) {
             break;
         }
 
+        pthread_cleanup_push(free, pkg);
+        pthread_cleanup_push(free, arg);
         ssize_t n =
             recvfrom(ctx->sockfd, pkg, pkg_length, 0, (struct sockaddr *)&cliaddr, &(socklen_t){sizeof(cliaddr)});
         if (n == -1) {
@@ -229,6 +231,8 @@ static void *server(ctx_t *ctx) {
             break;
         }
         logfD(logFmtHead "recv package with length %ld", n);
+        pthread_cleanup_pop(false);
+        pthread_cleanup_pop(false);
 
         arg->io_ctx    = ctx->io_ctx;
         arg->name      = ctx->name;
