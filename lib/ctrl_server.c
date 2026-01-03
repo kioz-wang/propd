@@ -283,12 +283,8 @@ int start_ctrl_server(const char *name, void *thread_pool, const io_ctx_t *io_ct
         goto exit_sun_path;
     }
 
-    if (tid) {
-        pthread_detach(_tid);
-        *tid = _tid;
-    } else {
-        pthread_join(_tid, NULL);
-    }
+    if (tid) *tid = _tid;
+    else pthread_join(_tid, NULL);
     return 0;
 
 exit_sun_path:

@@ -117,15 +117,14 @@ static task_t task_queue_pop(task_queue_t *queue) {
     return task;
 }
 
-static void cleanup(void *dummy) {
-    (void)dummy;
-    logfD("[thread_pool] cleanup a thread");
-}
+static void cleanup(task_queue_t *queue) { pthread_mutex_unlock(&queue->mutex); }
 
 static void *thread_pool_worker(task_queue_t *queue) {
-    pthread_cleanup_push(cleanup, NULL);
     while (true) {
-        task_t task = task_queue_pop(queue);
+        task_t task;
+        pthread_cleanup_push((void (*)(void *))cleanup, queue);
+        task = task_queue_pop(queue);
+        pthread_cleanup_pop(false);
         logfD("[thread_pool] task%d@%lx running", task._id, task.created);
 
         int result = task.routine(task.arg);
@@ -137,7 +136,6 @@ static void *thread_pool_worker(task_queue_t *queue) {
             sem_post(task.done);
         }
     }
-    pthread_cleanup_pop(false);
     return NULL;
 }
 
@@ -183,7 +181,6 @@ void *thread_pool_create(unsigned short thread_num, unsigned short min_if_auto, 
             logfE("[thread_pool] fail to create thread[%d] (%d)", i, ret);
             goto exit;
         }
-        pthread_detach(tpool->pool[i]);
     }
     tpool->num = thread_num;
 
@@ -199,17 +196,21 @@ void thread_pool_destroy(void *_tpool) {
     thread_pool_t *tpool = (thread_pool_t *)_tpool;
     if (!tpool) return;
 
-    for (int i = 0; i < tpool->num; i++) {
-        pthread_cancel(tpool->pool[i]);
-    }
-    tpool->num = 0;
+    if (tpool->pool) {
+        for (int i = 0; i < tpool->num; i++) {
+            pthread_cancel(tpool->pool[i]);
+        }
+        for (int i = 0; i < tpool->num; i++) {
+            pthread_join(tpool->pool[i], NULL);
+        }
+        tpool->num = 0;
+        free(tpool->pool);
 
-    if (tpool->task_queue) {
-        task_queue_deinit(tpool->task_queue);
-        free(tpool->task_queue);
+        if (tpool->task_queue) {
+            task_queue_deinit(tpool->task_queue);
+            free(tpool->task_queue);
+        }
     }
-
-    free(tpool->pool);
 
     free(tpool);
     logfI("[thread_pool] destroyed");

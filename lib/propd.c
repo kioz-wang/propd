@@ -408,7 +408,7 @@ static int __propd_run(const propd_config_t *config, int *syncfd) {
         signal(SIGINT, nop);
         signal(SIGTERM, nop);
         pause();
-        attach_wait("propd_attach.cleanup", '.', 2);
+        attach_wait("attach_cleanup", '.', 2);
         logfI(logFmtHead "cleanup", name);
     }
 
@@ -416,8 +416,14 @@ static int __propd_run(const propd_config_t *config, int *syncfd) {
         write(*syncfd, &ret, sizeof(ret));
     }
 
-    if (ctrl_tid_p) pthread_cancel(*ctrl_tid_p);
-    if (io_tid_p) pthread_cancel(*io_tid_p);
+    if (ctrl_tid_p) {
+        pthread_cancel(*ctrl_tid_p);
+        pthread_join(*ctrl_tid_p, NULL);
+    }
+    if (io_tid_p) {
+        pthread_cancel(*io_tid_p);
+        pthread_join(*io_tid_p, NULL);
+    }
     if (io_ctx.route) {
         if (config->parents) {
             for (int i = 0; config->parents[i]; i++) {

@@ -163,7 +163,6 @@ void *cache_create(timestamp_t min_interval, timestamp_t max_interval, timestamp
         errno = ret;
         return NULL;
     }
-    pthread_detach(cache->cleaner);
     logfI("[cache] created");
     return cache;
 }
@@ -173,6 +172,7 @@ void cache_destroy(void *_cache) {
     if (!cache) return;
 
     pthread_cancel(cache->cleaner);
+    pthread_join(cache->cleaner, NULL);
 
     sem_destroy(&cache->clean_notice);
 
