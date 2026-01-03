@@ -78,7 +78,7 @@ static int register_child(const io_ctx_t *io_ctx, const ctrl_package_register_ch
         return EINVAL;
     }
 
-    if (constructor_unix(&storage, storage_unix_temp, child->name)) {
+    if (constructor_unix(&storage, child->name, false)) {
         logfE(logFmtHead "register child %s but" logFmtErrno, child->name, logArgErrno);
         return errno;
     }
@@ -112,15 +112,7 @@ static int register_child(const io_ctx_t *io_ctx, const ctrl_package_register_ch
  * @return int errno
  */
 static int unregister_child(const io_ctx_t *io_ctx, const char *name) {
-    int ret = 0;
-
-    if (name[0]) {
-        ret = route_unregister(io_ctx->route, name);
-    } else {
-        while (!route_unregister(io_ctx->route, NULL))
-            ;
-    }
-    return ret;
+    return route_unregister(io_ctx->route, name[0] ? name : NULL);
 }
 
 static int dump_db_route(int sockfd, const struct sockaddr_un *cliaddr) {
@@ -291,12 +283,8 @@ int start_ctrl_server(const char *name, void *thread_pool, const io_ctx_t *io_ct
         goto exit_sun_path;
     }
 
-    if (tid) {
-        pthread_detach(_tid);
-        *tid = _tid;
-    } else {
-        pthread_join(_tid, NULL);
-    }
+    if (tid) *tid = _tid;
+    else pthread_join(_tid, NULL);
     return 0;
 
 exit_sun_path:

@@ -263,20 +263,18 @@ void propd_config_parse(propd_config_t *config, int argc, char *argv[]) {
                         parseConfig->argName);
                 goto error;
             }
-            const char   *name        = args[parseConfig->argNum];
-            const char  **prefixes    = &args[parseConfig->argNum + 1];
-            storage_ctx_t storage_ctx = {0};
-            if (parseConfig->parse(&storage_ctx, name, args)) {
-                fprintf(stderr, "fail to create a route item named %s" logFmtErrno "\n", name, logArgErrno);
+            const char  *name     = args[parseConfig->argNum];
+            const char **prefixes = &args[parseConfig->argNum + 1];
+
+            int           ret     = 0;
+            storage_ctx_t storage = {0};
+            if ((ret = parseConfig->parse(&storage, name, args))) {
+                fprintf(stderr, "fail to parse a route item named %s" logFmtErrno "\n", name, logArgErrno_(ret));
                 goto error;
             }
-            route_item_t *item = route_item_create(&storage_ctx, 0, prefixes);
-            if (!item) {
-                fprintf(stderr, "fail to create a route item named %s" logFmtErrno "\n", name, logArgErrno);
-                storage_destructor(&storage_ctx);
+            if ((ret = __route_register(&config->local_route, &storage, 0, prefixes))) {
                 goto error;
             }
-            LIST_INSERT_HEAD(&config->local_route, item, entry);
             arrayfree_cstring(args);
         } break;
         }
@@ -410,7 +408,7 @@ static int __propd_run(const propd_config_t *config, int *syncfd) {
         signal(SIGINT, nop);
         signal(SIGTERM, nop);
         pause();
-        attach_wait("propd_attach.cleanup", '.', 2);
+        attach_wait("attach_cleanup", '.', 2);
         logfI(logFmtHead "cleanup", name);
     }
 
@@ -418,21 +416,26 @@ static int __propd_run(const propd_config_t *config, int *syncfd) {
         write(*syncfd, &ret, sizeof(ret));
     }
 
-    if (ctrl_tid_p) pthread_cancel(*ctrl_tid_p);
-    if (io_tid_p) pthread_cancel(*io_tid_p);
+    if (ctrl_tid_p) {
+        pthread_cancel(*ctrl_tid_p);
+        pthread_join(*ctrl_tid_p, NULL);
+    }
+    if (io_tid_p) {
+        pthread_cancel(*io_tid_p);
+        pthread_join(*io_tid_p, NULL);
+    }
     if (io_ctx.route) {
         if (config->parents) {
             for (int i = 0; config->parents[i]; i++) {
                 ctrl_unregister_child(config->parents[i], name);
             }
         }
-        while (!route_unregister(io_ctx.route, NULL))
-            ;
+        route_unregister(io_ctx.route, NULL);
     }
+    thread_pool_destroy(tpool);
     route_destroy(io_ctx.route);
     cache_destroy(io_ctx.cache);
     named_mutex_destroy_namespace(io_ctx.nmtx_ns);
-    thread_pool_destroy(tpool);
 
     if (syncfd && ret) {
         write(*syncfd, &ret, sizeof(ret));

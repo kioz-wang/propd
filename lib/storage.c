@@ -55,7 +55,7 @@ int storage_get(const storage_ctx_t *storage, const char *key, const value_t **v
     char buffer1[32] = {0};
     value_fmt(buffer, sizeof(buffer), *value, false);
     duration_fmt(buffer1, sizeof(buffer1), _duration);
-    logfI(logFmtHead "get " logFmtKey " is" logFmtValue " with duration %s", logArgHead, key, buffer, buffer1);
+    logfI(logFmtHead "get " logFmtKey " is " logFmtValue " with duration %s", logArgHead, key, buffer, buffer1);
     return 0;
 }
 

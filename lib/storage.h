@@ -40,15 +40,16 @@
  * - No persistent blocking (timeout needs to be implemented)
  * - Returns 0 on success, errno otherwise
  * - Need to consider concurrency when different keys
+ * - Except for priv, none of the other arguments will ever be null
  *
- * The constructor is used to populate this context. It returns non-zero and sets errno on failure.
+ * The constructor is used to populate this context. It returns 0 on success, errno otherwise.
  */
 struct storage_ctx {
     const char *name; /* duplicated in constructor, release in destructor */
     void       *priv; /* allocated in constructor, release in destructor */
-    int (*get)(void *priv, const char * /* not null */, const value_t ** /* not null */, timestamp_t * /* not null */);
-    int (*set)(void *priv, const char * /* not null */, const value_t * /* not null */);
-    int (*del)(void *priv, const char * /* not null */);
+    int (*get)(void *priv, const char *, const value_t **, timestamp_t *);
+    int (*set)(void *priv, const char *, const value_t *);
+    int (*del)(void *priv, const char *);
     void (*destructor)(void *priv);
 };
 typedef struct storage_ctx storage_ctx_t;
@@ -59,8 +60,8 @@ typedef struct storage_ctx storage_ctx_t;
  * @param storage
  * @param key
  * @param value
- * @param duration maybe NULL
- * @return int errno
+ * @param duration maybe null
+ * @return int errno (EOPNOTSUPP ...)
  */
 int storage_get(const storage_ctx_t *storage, const char *key, const value_t **value, timestamp_t *duration);
 /**
@@ -69,7 +70,7 @@ int storage_get(const storage_ctx_t *storage, const char *key, const value_t **v
  * @param storage
  * @param key
  * @param value
- * @return int errno
+ * @return int errno (EOPNOTSUPP ...)
  */
 int storage_set(const storage_ctx_t *storage, const char *key, const value_t *value);
 /**
@@ -77,7 +78,7 @@ int storage_set(const storage_ctx_t *storage, const char *key, const value_t *va
  *
  * @param storage
  * @param key
- * @return int errno
+ * @return int errno (EOPNOTSUPP ...)
  */
 int storage_del(const storage_ctx_t *storage, const char *key);
 /**
@@ -87,12 +88,19 @@ int storage_del(const storage_ctx_t *storage, const char *key);
  */
 void storage_destructor(const storage_ctx_t *storage);
 
+/**
+ * storage 的命令行解析配置，通过 propd_config_apply_parser 注册到 propd_config 中后，将自动生成 help message
+ * 并参数解析。
+ *
+ * parse 是需要实现的 constructor 包装。第二个参数是实例名，第三个参数是通过 arrayparse_cstring 解析得到的 cstring's
+ * array，对应 argName 中的每个参数。It returns 0 on success, errno otherwise.
+ */
 struct storage_parseConfig {
-    const char *name;
-    const char *argName;
-    const char *note;
-    int         argNum;
-    int (*parse)(storage_ctx_t *, const char * /* not null */, const char ** /* not null */);
+    const char *name;    /* 类型名（storage_ctx 中的是实例名） */
+    const char *argName; /* `,`隔开并结尾的参数字符串。会后接`<NAME>,<PREFIXES>`，输出到 help message 中 */
+    const char *note;    /* 对参数的详细说明，会输出到 help message 中 */
+    int         argNum;  /* 参数数量 */
+    int (*parse)(storage_ctx_t *, const char *, const char **);
     LIST_ENTRY(storage_parseConfig) entry;
 };
 typedef struct storage_parseConfig storage_parseConfig_t;

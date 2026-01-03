@@ -46,10 +46,10 @@
 #define logFmtHead "[storage::(unix)] "
 
 struct priv {
-    storage_unix_t type;
+    bool shared;
     union {
-        const char *target; /* type: temp (default) */
-        struct {            /* type: long */
+        const char *target; /* not shared */
+        struct {            /* shared */
             int             connfd;
             pthread_mutex_t mutex;
         };
@@ -57,11 +57,11 @@ struct priv {
 };
 typedef struct priv priv_t;
 
-static int io_connect(const char *target, int *connfd) {
+static int io_connect(const char *target, int *__connfd) {
     int                ret     = 0;
     struct sockaddr_un cliaddr = {0}, servaddr = {0};
-    int                _connfd = socket(AF_LOCAL, SOCK_STREAM, 0);
-    if (_connfd == -1) {
+    int                connfd = socket(AF_LOCAL, SOCK_STREAM, 0);
+    if (connfd == -1) {
         logfE(logFmtHead "fail to get socket" logFmtErrno, logArgErrno);
         return errno;
     }
@@ -71,25 +71,25 @@ static int io_connect(const char *target, int *connfd) {
     random_alnum(&cliaddr.sun_path[1], sizeof(cliaddr.sun_path) - 2);
     cliaddr.sun_path[sizeof(cliaddr.sun_path) - 1] = 'X';
 
-    ret = bind(_connfd, (const struct sockaddr *)&cliaddr, sizeof(cliaddr));
+    ret = bind(connfd, (const struct sockaddr *)&cliaddr, sizeof(cliaddr));
     if (ret) {
         logfE(logFmtHead "fail to bind" logFmtErrno, logArgErrno);
-        close(_connfd);
-        return ENXIO;
+        close(connfd);
+        return errno;
     }
 
     servaddr.sun_family = AF_LOCAL;
     snprintf(servaddr.sun_path, sizeof(servaddr.sun_path), PathFmt_IOServer, g_at, target);
 
-    ret = connect(_connfd, (const struct sockaddr *)&servaddr, sizeof(servaddr));
+    ret = connect(connfd, (const struct sockaddr *)&servaddr, sizeof(servaddr));
     if (ret) {
         logfE(logFmtHead "fail to connect %s" logFmtErrno, target, logArgErrno);
-        close(_connfd);
-        return errno;
+        close(connfd);
+        return ENXIO;
     }
 
-    logfI(logFmtHead "connect %s as %d", target, _connfd);
-    *connfd = _connfd;
+    logfI(logFmtHead "connect %s as %d", target, connfd);
+    *__connfd = connfd;
     return 0;
 }
 
@@ -146,12 +146,12 @@ static int get(priv_t *priv, const char *key, const value_t **value, timestamp_t
     value_t     value_head;
     value_t    *_value = NULL;
 
-    if (priv->type == storage_unix_temp) {
-        ret = io_connect(priv->target, &connfd);
-        if (ret) return ret;
-    } else {
+    if (priv->shared) {
         connfd = priv->connfd;
         pthread_mutex_lock(&priv->mutex);
+    } else {
+        ret = io_connect(priv->target, &connfd);
+        if (ret) return ret;
     }
 
     io_begin(connfd, _io_get, key, NULL);
@@ -168,7 +168,7 @@ static int get(priv_t *priv, const char *key, const value_t **value, timestamp_t
     }
     logfD(logFmtHead logFmtKey " <<<%d recv header of value with type %d", key, connfd, value_head.type);
 
-    _value = (value_t *)malloc(sizeof(value_t) + value_head.length);
+    _value = malloc(sizeof(value_t) + value_head.length);
     if (!_value) {
         ret = errno;
         goto exit;
@@ -186,10 +186,10 @@ static int get(priv_t *priv, const char *key, const value_t **value, timestamp_t
         goto exit;
     }
 
-    if (priv->type == storage_unix_temp) {
-        io_disconnect(connfd);
-    } else {
+    if (priv->shared) {
         pthread_mutex_unlock(&priv->mutex);
+    } else {
+        io_disconnect(connfd);
     }
     *value    = _value;
     *duration = _duration;
@@ -197,10 +197,10 @@ static int get(priv_t *priv, const char *key, const value_t **value, timestamp_t
 
 exit:
     unix_stream_discard(connfd);
-    if (priv->type == storage_unix_temp) {
-        io_disconnect(connfd);
-    } else {
+    if (priv->shared) {
         pthread_mutex_unlock(&priv->mutex);
+    } else {
+        io_disconnect(connfd);
     }
     free(_value);
     return ret;
@@ -210,21 +210,21 @@ static int set(priv_t *priv, const char *key, const value_t *value) {
     int ret    = 0;
     int connfd = -1;
 
-    if (priv->type == storage_unix_temp) {
-        ret = io_connect(priv->target, &connfd);
-        if (ret) return ret;
-    } else {
+    if (priv->shared) {
         connfd = priv->connfd;
         pthread_mutex_lock(&priv->mutex);
+    } else {
+        ret = io_connect(priv->target, &connfd);
+        if (ret) return ret;
     }
 
     io_begin(connfd, _io_set, key, value);
     ret = io_end(connfd, key);
 
-    if (priv->type == storage_unix_temp) {
-        io_disconnect(connfd);
-    } else {
+    if (priv->shared) {
         pthread_mutex_unlock(&priv->mutex);
+    } else {
+        io_disconnect(connfd);
     }
     return ret;
 }
@@ -233,66 +233,63 @@ static int del(priv_t *priv, const char *key) {
     int ret    = 0;
     int connfd = -1;
 
-    if (priv->type == storage_unix_temp) {
-        ret = io_connect(priv->target, &connfd);
-        if (ret) return ret;
-    } else {
+    if (priv->shared) {
         connfd = priv->connfd;
         pthread_mutex_lock(&priv->mutex);
+    } else {
+        ret = io_connect(priv->target, &connfd);
+        if (ret) return ret;
     }
 
     io_begin(connfd, _io_del, key, NULL);
     ret = io_end(connfd, key);
 
-    if (priv->type == storage_unix_temp) {
-        io_disconnect(connfd);
-    } else {
+    if (priv->shared) {
         pthread_mutex_unlock(&priv->mutex);
+    } else {
+        io_disconnect(connfd);
     }
     return ret;
 }
 
 static void destructor(priv_t *priv) {
-    if (priv->type == storage_unix_temp) {
-        free((void *)priv->target);
-    } else {
+    if (priv->shared) {
         io_disconnect(priv->connfd);
         pthread_mutex_destroy(&priv->mutex);
+    } else {
+        free((void *)priv->target);
     }
     free(priv);
 }
 
-int constructor_unix(storage_ctx_t *ctx, storage_unix_t type, const char *target) {
-    if (!(ctx->name = strdup(target))) {
+int constructor_unix(storage_ctx_t *ctx, const char *name, bool shared) {
+    if (!(ctx->name = strdup(name))) {
         logfE(logFmtHead "fail to allocate name" logFmtErrno, logArgErrno);
-        return -1;
+        return errno;
     }
-
-    priv_t *priv = (priv_t *)malloc(sizeof(priv_t));
+    priv_t *priv = malloc(sizeof(priv_t));
     if (!priv) {
         logfE(logFmtHead "fail to allocate priv" logFmtErrno, logArgErrno);
         free((void *)ctx->name);
-        return -1;
+        return errno;
     }
-    priv->type = type;
-    if (type == storage_unix_temp) {
-        if (!(priv->target = strdup(target))) {
-            logfE(logFmtHead "fail to allocate target" logFmtErrno, logArgErrno);
-            free((void *)ctx->name);
-            free(priv);
-            return -1;
-        }
-    } else if (type == storage_unix_long) {
+    priv->shared = shared;
+
+    if (shared) {
         pthread_mutex_init(&priv->mutex, NULL);
-        errno = io_connect(target, &priv->connfd);
-        if (errno) {
-            free((void *)ctx->name);
+        int ret = io_connect(name, &priv->connfd);
+        if (ret) {
             free(priv);
-            return -1;
+            free((void *)ctx->name);
+            return ret;
         }
     } else {
-        assert(false);
-        return -1;
+        if (!(priv->target = strdup(name))) {
+            logfE(logFmtHead "fail to allocate target" logFmtErrno, logArgErrno);
+            free(priv);
+            free((void *)ctx->name);
+            return errno;
+        }
     }
 
     ctx->priv       = priv;
@@ -304,25 +301,22 @@ int constructor_unix(storage_ctx_t *ctx, storage_unix_t type, const char *target
 }
 
 static int parse(storage_ctx_t *ctx, const char *name, const char **args) {
-    const char    *type_s = args[0];
-    storage_unix_t type   = 0;
+    const char *type_s = args[0];
+    bool        shared = false;
 
-    if (!type_s[0]) type = storage_unix_temp;
-    else if (!strcmp(type_s, "temp")) type = storage_unix_temp;
-    else if (!strcmp(type_s, "long")) type = storage_unix_long;
-    else {
-        errno = EINVAL;
-        return -1;
-    }
+    if (!type_s[0]) shared = false;
+    else if (!strcmp(type_s, "temp")) shared = false;
+    else if (!strcmp(type_s, "long")) shared = true;
+    else return EINVAL;
 
-    return constructor_unix(ctx, type, name);
+    return constructor_unix(ctx, name, shared);
 }
 
 storage_parseConfig_t unix_parseConfig = {
     .name    = "unix",
     .argName = "[<TYPE>],",
-    .note    = "注册类型为unix的本地IO（与通过--children注册不同的是：不需要child具有ctrl "
-               "server，且不支持“立即缓存”）。TYPE取值temp,long",
+    .note    = "注册类型为unix的存储（与通过--children注册不同的是：不需要child具有ctrl "
+               "server，且不支持“立即缓存”）。TYPE取值temp,long，默认为temp",
     .argNum  = 1,
     .parse   = parse,
 };
