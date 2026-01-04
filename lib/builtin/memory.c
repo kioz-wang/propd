@@ -31,7 +31,6 @@
 #include "builtin.h"
 #include "cache.h"
 #include "global.h"
-#include "logger/logger.h"
 #include "memio/layout.h"
 #include <errno.h>
 #include <fcntl.h>

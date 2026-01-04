@@ -233,7 +233,9 @@ bool prefix_match(const char *prefix, const char *str) {
     return c1 == '*';
 }
 
-void attach_wait(const char *envname, char c, int unit) {
+void attach_wait(const char *envname __attribute__((unused)), char c __attribute__((unused)),
+                 int unit __attribute__((unused))) {
+#ifndef NDEBUG
     const char *n_str = getenv(envname ? envname : "ATTACH_WAIT");
     if (!n_str) return;
 
@@ -251,6 +253,7 @@ void attach_wait(const char *envname, char c, int unit) {
         fputc(c, stderr);
     } while (--n);
     fputc('\n', stderr);
+#endif
 }
 
 #ifdef __TEST_MISC

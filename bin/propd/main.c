@@ -33,18 +33,25 @@
 #include "propd.h"
 
 int main(int argc, char *argv[]) {
+    int            ret        = 0;
+    storage_ctx_t  storage    = {0};
+    const char    *prefixes[] = {"*", NULL};
     propd_config_t config;
 
     propd_config_default(&config);
 
     propd_config_apply_parser(&config, &file_parseConfig);
     propd_config_apply_parser(&config, &unix_parseConfig);
+    propd_config_apply_parser(&config, &memory_parseConfig);
+    propd_config_apply_parser(&config, &tcp_parseConfig);
 
     attach_wait("propd_attach", '.', 2);
     propd_config_parse(&config, argc, argv);
 
-    /* TODO register some local storage by code if you want */
-    // int ret = propd_register(storage, "node_name", 0, NULL);
+    ret = constructor_null(&storage, "null");
+    if (ret) return ret;
+    ret = propd_config_register(&config, &storage, 0, prefixes);
+    if (ret) return ret;
 
     return propd_run(&config);
 }

@@ -35,7 +35,6 @@
 #include "infra/named_mutex.h"
 #include "infra/thread_pool.h"
 #include "io_server.h"
-#include "logger/logger.h"
 #include "misc.h"
 #include "route.h"
 #include "storage.h"
@@ -48,15 +47,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-void __attribute__((constructor)) __propd_env_parse(void) {
-    const char *namespace_s = getenv("propd_namespace");
-    if (namespace_s && namespace_s[0]) {
-        g_at = namespace_s;
-    }
-}
-
 void propd_config_default(propd_config_t *config) {
-    config->loglevel = MLOG_INFO;
+    config->loglevel = MLOG_WARN;
     config->logger   = NULL;
 
     config->namespace = NULL;
@@ -80,15 +72,9 @@ void propd_config_default(propd_config_t *config) {
     LIST_INIT(&config->io_parseConfigs);
 }
 
-int propd_config_register(propd_config_t *config, const storage_ctx_t *storage_ctx, uint32_t num_prefix,
+int propd_config_register(propd_config_t *config, const storage_ctx_t *storage, uint32_t num_prefix,
                           const char *prefix[]) {
-    route_item_t *item = route_item_create(storage_ctx, num_prefix, prefix);
-    if (!item) {
-        fprintf(stderr, "fail to create a route item named %s" logFmtErrno "\n", storage_ctx->name, logArgErrno);
-        return errno;
-    }
-    LIST_INSERT_HEAD(&config->local_route, item, entry);
-    return 0;
+    return __route_register(&config->local_route, storage, num_prefix, prefix);
 }
 
 static void help_message(const propd_config_t *config) {
@@ -192,7 +178,7 @@ void propd_config_parse(propd_config_t *config, int argc, char *argv[]) {
             config->loglevel = mlog_level_parse(optarg);
             break;
         case 'v':
-            config->loglevel = MLOG_VERB;
+            config->loglevel++;
             break;
         case 'N':
             config->namespace = optarg;
@@ -446,7 +432,9 @@ static int __propd_run(const propd_config_t *config, int *syncfd) {
 
 int propd_run(const propd_config_t *config) {
     int ret = 0;
-    propd_set_logger(config->loglevel, config->logger);
+    mlog_set_logger(&g_logger, config->loglevel, config->logger);
+    mlog_init(&g_logger, "propd_loglevel", "propd_log2stderr", MLOG_FMT_NEWLINE,
+              MLOG_FMT_COLOR | MLOG_FMT_TIMESTAMP | MLOG_FMT_LEVEL_HEAD | MLOG_FMT_NEWLINE);
 
     if (!config->daemon) return __propd_run(config, NULL);
 

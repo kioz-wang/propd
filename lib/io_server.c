@@ -32,7 +32,6 @@
 #include "io_server.h"
 #include "global.h"
 #include "infra/thread_pool.h"
-#include "logger/logger.h"
 #include <errno.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -77,7 +76,7 @@ static int get(const worker_arg_t *arg, int connfd, const char *key) {
 
     if (!ret) {
         n = send(connfd, value, sizeof(value_t) + value->length, MSG_NOSIGNAL);
-        if (n != sizeof(value_t) + value->length) goto exit;
+        if (n != (ssize_t)(sizeof(value_t) + value->length)) goto exit;
         logfD(logFmtHead logFmtKey " >>>%d send value with type %d length %d", key, connfd, value->type, value->length);
     } else {
         value_t undef = {.type = _value_undef, .length = 0};

@@ -31,7 +31,6 @@
 #include "cache.h"
 #include "global.h"
 #include "infra/tree.h"
-#include "logger/logger.h"
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>

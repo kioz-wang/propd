@@ -31,7 +31,6 @@
 #include "storage.h"
 #include "cache.h"
 #include "global.h"
-#include "logger/logger.h"
 #include <errno.h>
 
 #define logFmtHead "[storage::%s] "

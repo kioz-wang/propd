@@ -29,7 +29,7 @@
  */
 
 #include "thread_pool.h"
-#include "logger/logger.h"
+#include "global.h"
 #include "timestamp.h"
 #include <assert.h>
 #include <errno.h>

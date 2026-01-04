@@ -30,7 +30,6 @@
 
 #include "builtin.h"
 #include "global.h"
-#include "logger/logger.h"
 #include <errno.h>
 #include <linux/limits.h>
 #include <stdio.h>

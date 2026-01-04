@@ -33,6 +33,7 @@
 
 #include "storage.h"
 
+int constructor_null(storage_ctx_t *ctx, const char *name);
 int constructor_file(storage_ctx_t *ctx, const char *name, const char *dir);
 int constructor_unix(storage_ctx_t *ctx, const char *name, bool shared);
 int constructor_memory(storage_ctx_t *ctx, const char *name, long phy, const void *layout);

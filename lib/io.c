@@ -32,7 +32,6 @@
 #include "cache.h"
 #include "global.h"
 #include "infra/named_mutex.h"
-#include "logger/logger.h"
 #include "route.h"
 #include <errno.h>
 

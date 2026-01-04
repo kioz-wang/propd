@@ -31,6 +31,18 @@
 #ifndef __PROPD_GLOBAL_H
 #define __PROPD_GLOBAL_H
 
+#include "mlogger/logger.h"
+#include <errno.h>
+#include <string.h>
+
+extern mlogger_t g_logger;
+
+#define logfE(fmt, ...) mlogf(&g_logger, MLOG_ERRO, fmt, ##__VA_ARGS__)
+#define logfW(fmt, ...) mlogf(&g_logger, MLOG_WARN, fmt, ##__VA_ARGS__)
+#define logfI(fmt, ...) mlogf(&g_logger, MLOG_INFO, fmt, ##__VA_ARGS__)
+#define logfV(fmt, ...) mlogf(&g_logger, MLOG_VERB, fmt, ##__VA_ARGS__)
+#define logfD(fmt, ...) mlogf(&g_logger, MLOG_DEBG, fmt, ##__VA_ARGS__)
+
 extern const char *g_at;
 
 #define PathFmt_CtrlServer "%s/propd.%s.ctrl"

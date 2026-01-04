@@ -30,7 +30,6 @@
 
 #include "route.h"
 #include "global.h"
-#include "logger/logger.h"
 #include "misc.h"
 #include <assert.h>
 #include <errno.h>

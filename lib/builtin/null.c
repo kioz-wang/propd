@@ -1,9 +1,9 @@
 /**
- * @file tcp.c
+ * @file null.c
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
- * @date 2025-12-15
+ * @date 2026-01-04
  *
  * @copyright MIT License
  *
@@ -28,43 +28,27 @@
  *  SOFTWARE.
  */
 
-#include "builtin.h"
+#include "builtin/builtin.h"
 #include "global.h"
-#include <errno.h>
 
-#define logFmtHead "[storage::(tcp)] "
+#define logFmtHead "[storage::(null)] "
 
-struct priv {
-    /* TODO */;
-};
-typedef struct priv priv_t;
+static int set(void *priv __attribute__((unused)), const char *key __attribute__((unused)),
+               const value_t *value __attribute__((unused))) {
+    return 0;
+}
+static int del(void *priv __attribute__((unused)), const char *key __attribute__((unused))) { return 0; }
 
-int constructor_tcp(storage_ctx_t *ctx, const char *name, const char *ip, unsigned short port) {
+int constructor_null(storage_ctx_t *ctx, const char *name) {
     if (!(ctx->name = strdup(name))) {
         logfE(logFmtHead "fail to allocate name" logFmtErrno, logArgErrno);
         return errno;
     }
 
-    priv_t *priv = (priv_t *)malloc(sizeof(priv_t));
-    if (!priv) {
-        logfE(logFmtHead "fail to allocate priv" logFmtErrno, logArgErrno);
-        return errno;
-    }
-
-    ctx->priv       = priv;
-    ctx->destructor = free;
-    return EOPNOTSUPP;
+    ctx->priv       = NULL;
+    ctx->get        = NULL;
+    ctx->set        = (typeof(ctx->set))set;
+    ctx->del        = (typeof(ctx->del))del;
+    ctx->destructor = NULL;
+    return 0;
 }
-
-static int parse(storage_ctx_t *ctx, const char *name, const char **args) {
-    unsigned short port = strtoul(args[1], NULL, 0);
-    return constructor_tcp(ctx, name, args[0], port);
-}
-
-storage_parseConfig_t tcp_parseConfig = {
-    .name    = "tcp",
-    .argName = "<IP>,<PORT>,",
-    .note    = "注册类型为tcp的本地IO。IP，PORT是tcp IO需要连接的目标",
-    .argNum  = 2,
-    .parse   = parse,
-};

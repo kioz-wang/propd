@@ -29,6 +29,15 @@
  */
 
 #include "global.h"
-#include <stdio.h>
+#include <stdlib.h>
 
 const char *g_at = "/tmp";
+
+void __attribute__((constructor)) __propd_env_parse(void) {
+    const char *namespace_s = getenv("propd_namespace");
+    if (namespace_s && namespace_s[0]) {
+        g_at = namespace_s;
+    }
+}
+
+mlogger_t g_logger;

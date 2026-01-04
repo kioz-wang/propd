@@ -33,7 +33,6 @@
 #include "global.h"
 #include "infra/thread_pool.h"
 #include "io.h"
-#include "logger/logger.h"
 #include "misc.h"
 #include "route.h"
 #include "storage.h"
@@ -162,7 +161,8 @@ static int worker(worker_arg_t *arg) {
         goto exit;
     }
 
-    ssize_t n = sendto(arg->sockfd, &ret, sizeof(ret), 0, (const struct sockaddr *)&arg->cliaddr, sizeof(arg->cliaddr));
+    ssize_t n __attribute__((unused)) =
+        sendto(arg->sockfd, &ret, sizeof(ret), 0, (const struct sockaddr *)&arg->cliaddr, sizeof(arg->cliaddr));
     assert(n == sizeof(ret));
     logfD(logFmtHead "send result" logFmtRet, ret);
 

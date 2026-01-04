@@ -1,7 +1,0 @@
-/.cache/
-/build/
-/compile_commands.json
-.vscode/settings.json
-*.gch
-*.o
-a.out

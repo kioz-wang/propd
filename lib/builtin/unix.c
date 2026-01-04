@@ -31,7 +31,6 @@
 #include "builtin/builtin.h"
 #include "global.h"
 #include "io_server.h"
-#include "logger/logger.h"
 #include "misc.h"
 #include <errno.h>
 #include <fcntl.h>
@@ -100,7 +99,7 @@ static void io_disconnect(int connfd) {
 }
 
 static void io_begin(int connfd, io_type_t type, const char *key, const value_t *value) {
-    ssize_t      n;
+    ssize_t      n __attribute__((unused));
     io_package_t pkg_head = {.type = type, .created = timestamp(true)};
 
     strncpy(pkg_head.key, key, sizeof(pkg_head.key));

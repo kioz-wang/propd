@@ -32,13 +32,13 @@
 #define __PROPD_H
 
 #include "infra/timestamp.h"
-#include "logger/logger.h"
+#include "mlogger/logger.h"
 #include "route.h"
 #include <sys/queue.h>
 
 struct propd_config {
-    mlog_level_t loglevel; /* MLOG_INFO default */
-    mlogger_f    logger;   /* fputs(stdout) default */
+    mlog_level_t loglevel; /* MLOG_WARN default */
+    mlog_f       logger;   /* fputs(stdout) default */
 
     const char *namespace; /* Unix Sockets root path. /tmp default */
 

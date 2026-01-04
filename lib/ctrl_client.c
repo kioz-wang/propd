@@ -31,7 +31,6 @@
 #define _GNU_SOURCE
 #include "ctrl_server.h"
 #include "global.h"
-#include "logger/logger.h"
 #include "misc.h"
 #include <assert.h>
 #include <errno.h>
@@ -101,8 +100,8 @@ static int ctrl_update(ctrl_context_t *ctx) {
 }
 
 static int ctrl_final0(ctrl_context_t *ctx, void **data, int *data_length) {
-    int     ret = 0;
-    ssize_t n   = 0;
+    int     ret                       = 0;
+    ssize_t n __attribute__((unused)) = 0;
 
     switch (ctx->package->type) {
     case _ctrl_dump_db_route:
