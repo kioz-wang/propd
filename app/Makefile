@@ -5,7 +5,7 @@
 CC ?= gcc
 CFLAGS_DEBUG ?= -g -O0
 CFLAGS_RELEASE ?= -DNDEBUG
-CFLAGS ?= -std=gnu11 -Wall -Wextra $(CFLAGS_RELEASE)
+CFLAGS ?= -std=gnu11 -Wall -Wextra $(CFLAGS_DEBUG)
 
 # 目录
 BIN_SRC_DIR = .
