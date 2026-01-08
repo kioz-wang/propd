@@ -31,36 +31,7 @@
 #ifndef __PROPD_CTRL_CLIENT_H
 #define __PROPD_CTRL_CLIENT_H
 
-#include <linux/limits.h>
 #include <stdint.h>
-
-enum ctrl_type {
-    _ctrl_register_child = 0, /* child, prefix[] */
-    _ctrl_register_parent,    /* parent */
-    _ctrl_unregister_child,   /* child */
-    _ctrl_unregister_parent,  /* parent */
-    _ctrl_dump_db_route,      /* - */
-    _ctrl_dump_db_cache,      /* - */
-};
-typedef uint8_t ctrl_type_t;
-
-typedef struct {
-    char     name[NAME_MAX];
-    uint32_t num_cache_now;
-    uint32_t num_prefix;
-    char     cache_now_then_prefix[][NAME_MAX];
-} __attribute__((packed)) ctrl_package_register_child_t;
-
-struct ctrl_package {
-    ctrl_type_t type;
-    union {
-        ctrl_package_register_child_t child;
-        char                          name[NAME_MAX];
-    };
-} __attribute__((packed));
-typedef struct ctrl_package ctrl_package_t;
-
-/* Client APIs */
 
 /**
  * @brief Register a route item into server
