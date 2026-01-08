@@ -14,5 +14,7 @@ file(GLOB_RECURSE PROPD_SOURCES CONFIGURE_DEPENDS
 message(STATUS "source list => ${PROPD_SOURCES}")
 
 add_library(libpropd SHARED ${PROPD_SOURCES})
-target_include_directories(libpropd PUBLIC .)
+target_include_directories(libpropd PRIVATE .)
+target_include_directories(libpropd PUBLIC include)
+target_include_directories(libpropd PUBLIC mlogger)
 target_link_libraries(libpropd cjson)

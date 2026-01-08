@@ -29,14 +29,14 @@
  */
 
 #include "builtin.h"
-#include "ctrl_server.h"
-#include "global.h"
+#include "ctrl_client.h"
 #include "misc.h"
 #include "storage.h"
 #include <getopt.h>
 #include <stdio.h>
 #include <string.h>
 
+extern const char *g_at;
 static const char *g_server = "root";
 
 static int command_ctrl(int argc, char *argv[]) {
@@ -72,7 +72,7 @@ static int command_get(int argc, char *argv[]) {
         return UINT8_MAX;
     }
 
-    int           ret     = 0;
+    int       ret     = 0;
     storage_t storage = {0};
     if (prop_unix_storage(&storage, g_server, true)) {
         return -1;
@@ -99,7 +99,7 @@ static int command_set(int argc, char *argv[]) {
         return UINT8_MAX;
     }
 
-    int           ret     = 0;
+    int       ret     = 0;
     storage_t storage = {0};
     if (prop_unix_storage(&storage, g_server, true)) {
         return -1;
@@ -126,7 +126,7 @@ static int command_del(int argc, char *argv[]) {
         return UINT8_MAX;
     }
 
-    int           ret     = 0;
+    int       ret     = 0;
     storage_t storage = {0};
     if (prop_unix_storage(&storage, g_server, true)) {
         return -1;

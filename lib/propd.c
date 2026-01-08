@@ -30,6 +30,7 @@
 
 #include "propd.h"
 #include "cache.h"
+#include "ctrl_client.h"
 #include "ctrl_server.h"
 #include "global.h"
 #include "infra/named_mutex.h"
@@ -72,8 +73,7 @@ void propd_config_default(propd_config_t *config) {
     LIST_INIT(&config->io_parseConfigs);
 }
 
-int propd_config_register(propd_config_t *config, const storage_t *storage, uint32_t num_prefix,
-                          const char *prefix[]) {
+int propd_config_register(propd_config_t *config, const storage_t *storage, uint32_t num_prefix, const char *prefix[]) {
     return __route_register(&config->local_route, storage, num_prefix, prefix);
 }
 
@@ -252,7 +252,7 @@ void propd_config_parse(propd_config_t *config, int argc, char *argv[]) {
             const char  *name     = args[parseConfig->argNum];
             const char **prefixes = &args[parseConfig->argNum + 1];
 
-            int           ret     = 0;
+            int       ret     = 0;
             storage_t storage = {0};
             if ((ret = parseConfig->parse(&storage, name, args))) {
                 fprintf(stderr, "fail to parse a route item named %s" logFmtErrno "\n", name, logArgErrno_(ret));

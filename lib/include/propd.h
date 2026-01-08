@@ -32,7 +32,7 @@
 #define __PROPD_H
 
 #include "infra/timestamp.h"
-#include "mlogger/logger.h"
+#include "logger.h"
 #include "route.h"
 #include <sys/queue.h>
 

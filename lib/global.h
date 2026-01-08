@@ -31,7 +31,7 @@
 #ifndef __PROPD_GLOBAL_H
 #define __PROPD_GLOBAL_H
 
-#include "mlogger/logger.h"
+#include "logger.h"
 #include <errno.h>
 #include <string.h>
 

@@ -30,6 +30,7 @@
 
 #include "ctrl_server.h"
 #include "builtin.h"
+#include "ctrl_client.h"
 #include "global.h"
 #include "infra/thread_pool.h"
 #include "io.h"
@@ -69,7 +70,7 @@ typedef struct worker_arg worker_arg_t;
  * @return int errno
  */
 static int register_child(const io_ctx_t *io_ctx, const ctrl_package_register_child_t *child) {
-    int           ret     = 0;
+    int       ret     = 0;
     storage_t storage = {0};
 
     if (!child->num_cache_now && !child->num_prefix) {
