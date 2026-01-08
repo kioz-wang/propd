@@ -39,7 +39,7 @@
 #include <string.h>
 #include <unistd.h>
 
-route_item_t *route_item_create(const storage_ctx_t *storage, uint32_t num_prefix, const char *prefix[]) {
+route_item_t *route_item_create(const storage_t *storage, uint32_t num_prefix, const char *prefix[]) {
     route_item_t *item = malloc(sizeof(route_item_t));
     if (!item) return NULL;
     if (!(item->prefix = arraydup_cstring(prefix, num_prefix))) {
@@ -54,7 +54,7 @@ route_item_t *route_item_create(const storage_ctx_t *storage, uint32_t num_prefi
 void route_item_destroy(route_item_t *item) {
     if (!item) return;
     arrayfree_cstring(item->prefix);
-    storage_destructor(&item->storage);
+    prop_storage_destructor(&item->storage);
     free(item);
 }
 
@@ -104,7 +104,7 @@ void route_init(void *_route, struct route_list list) {
     }
 }
 
-int __route_register(struct route_list *list, const storage_ctx_t *storage, uint32_t num_prefix, const char *prefix[]) {
+int __route_register(struct route_list *list, const storage_t *storage, uint32_t num_prefix, const char *prefix[]) {
     route_item_t *temp = NULL;
     LIST_FOREACH(temp, list, entry) {
         if (!strcmp(temp->storage.name, storage->name)) {
@@ -124,7 +124,7 @@ int __route_register(struct route_list *list, const storage_ctx_t *storage, uint
     return 0;
 }
 
-int route_register(void *_route, const storage_ctx_t *storage, uint32_t num_prefix, const char *prefix[]) {
+int route_register(void *_route, const storage_t *storage, uint32_t num_prefix, const char *prefix[]) {
     route_t *route = _route;
     pthread_rwlock_wrlock(&route->rwlock);
     int ret = __route_register(&route->list, storage, num_prefix, prefix);
@@ -175,7 +175,7 @@ int route_unregister(void *_route, const char *name) {
     return ret;
 }
 
-int route_match(void *_route, const char *key, const storage_ctx_t **storage) {
+int route_match(void *_route, const char *key, const storage_t **storage) {
     route_t      *route = _route;
     int           ret   = 0;
     route_item_t *item  = NULL;
@@ -202,7 +202,7 @@ exit:
     return ret;
 }
 
-void route_deref(const storage_ctx_t *storage) {
+void route_deref(const storage_t *storage) {
     route_item_t *item = (route_item_t *)((char *)storage - offsetof(route_item_t, storage));
     atomic_fetch_sub(&item->nref, 1);
 }

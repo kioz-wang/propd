@@ -58,7 +58,7 @@ int io_get(const io_ctx_t *io, const char *key, const value_t **value, timestamp
  * @param storage
  * @return int errno
  */
-int io_update(const io_ctx_t *io, const char *key, const storage_ctx_t *storage);
+int io_update(const io_ctx_t *io, const char *key, const storage_t *storage);
 /**
  * @brief Set key on server end
  *

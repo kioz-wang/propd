@@ -39,7 +39,7 @@ struct priv {
 };
 typedef struct priv priv_t;
 
-int constructor_tcp(storage_ctx_t *ctx, const char *name, const char *ip, unsigned short port) {
+int prop_tcp_storage(storage_t *ctx, const char *name, const char *ip, unsigned short port) {
     if (!(ctx->name = strdup(name))) {
         logfE(logFmtHead "fail to allocate name" logFmtErrno, logArgErrno);
         return errno;
@@ -56,12 +56,12 @@ int constructor_tcp(storage_ctx_t *ctx, const char *name, const char *ip, unsign
     return EOPNOTSUPP;
 }
 
-static int parse(storage_ctx_t *ctx, const char *name, const char **args) {
+static int parse(storage_t *ctx, const char *name, const char **args) {
     unsigned short port = strtoul(args[1], NULL, 0);
-    return constructor_tcp(ctx, name, args[0], port);
+    return prop_tcp_storage(ctx, name, args[0], port);
 }
 
-storage_parseConfig_t tcp_parseConfig = {
+storage_parseConfig_t prop_tcp_parseConfig = {
     .name    = "tcp",
     .argName = "<IP>,<PORT>,",
     .note    = "注册类型为tcp的本地IO。IP，PORT是tcp IO需要连接的目标",

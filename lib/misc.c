@@ -233,8 +233,8 @@ bool prefix_match(const char *prefix, const char *str) {
     return c1 == '*';
 }
 
-void attach_wait(const char *envname __attribute__((unused)), char c __attribute__((unused)),
-                 int unit __attribute__((unused))) {
+void pd_attach_wait(const char *envname __attribute__((unused)), char c __attribute__((unused)),
+                    int unit __attribute__((unused))) {
 #ifndef NDEBUG
     const char *n_str = getenv(envname ? envname : "ATTACH_WAIT");
     if (!n_str) return;

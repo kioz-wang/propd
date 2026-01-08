@@ -33,15 +33,15 @@
 
 #include "storage.h"
 
-int constructor_null(storage_ctx_t *ctx, const char *name);
-int constructor_file(storage_ctx_t *ctx, const char *name, const char *dir);
-int constructor_unix(storage_ctx_t *ctx, const char *name, bool shared);
-int constructor_memory(storage_ctx_t *ctx, const char *name, long phy, const void *layout);
-int constructor_tcp(storage_ctx_t *ctx, const char *name, const char *ip, unsigned short port);
+int prop_null_storage(storage_t *ctx, const char *name);
+int prop_file_storage(storage_t *ctx, const char *name, const char *dir);
+int prop_unix_storage(storage_t *ctx, const char *name, bool shared);
+int prop_memory_storage(storage_t *ctx, const char *name, long phy, const void *layout);
+int prop_tcp_storage(storage_t *ctx, const char *name, const char *ip, unsigned short port);
 
-extern storage_parseConfig_t file_parseConfig;
-extern storage_parseConfig_t unix_parseConfig;
-extern storage_parseConfig_t memory_parseConfig;
-extern storage_parseConfig_t tcp_parseConfig;
+extern storage_parseConfig_t prop_file_parseConfig;
+extern storage_parseConfig_t prop_unix_parseConfig;
+extern storage_parseConfig_t prop_memory_parseConfig;
+extern storage_parseConfig_t prop_tcp_parseConfig;
 
 #endif /* __PROPD_BRIDGE_H */

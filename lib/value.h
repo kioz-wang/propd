@@ -108,7 +108,7 @@ static inline _value_to(double, double);
  * @param str
  * @return value_t* On error, return NULL and set errno (ENOMEM EINVAL)
  */
-value_t *value_parse(const char *str);
+value_t *pd_value_parse(const char *str);
 /**
  * @brief Format a value (Only for logging, due to potential truncation)
  *
@@ -118,6 +118,6 @@ value_t *value_parse(const char *str);
  * @param notype
  * @return const char* Always return a pointer to buffer
  */
-const char *value_fmt(char *buffer, size_t length, const value_t *value, bool notype);
+const char *pd_value_fmt(char *buffer, size_t length, const value_t *value, bool notype);
 
 #endif /* __PROPD_VALUE_H */

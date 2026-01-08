@@ -34,7 +34,7 @@
 #include <limits.h>
 #include <stdio.h>
 
-value_t *value_parse(const char *str) {
+value_t *pd_value_parse(const char *str) {
     const char *value = str;
     const char *colon = strchr(str, ':');
     if (colon) {
@@ -106,7 +106,7 @@ exit_inval:
     return NULL;
 }
 
-const char *value_fmt(char *buffer, size_t length, const value_t *value, bool notype) {
+const char *pd_value_fmt(char *buffer, size_t length, const value_t *value, bool notype) {
     switch (value->type) {
     case _value_i32:
         snprintf(buffer, length, "%s%d", notype ? "" : "i32:", value_to_i32(value));

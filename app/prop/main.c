@@ -28,7 +28,7 @@
  *  SOFTWARE.
  */
 
-#include "builtin/builtin.h"
+#include "builtin.h"
 #include "ctrl_server.h"
 #include "global.h"
 #include "misc.h"
@@ -42,17 +42,17 @@ static const char *g_server = "root";
 static int command_ctrl(int argc, char *argv[]) {
     if (argc >= 2) {
         if (!strcmp(argv[1], "register_child")) {
-            if (argc >= 4) return ctrl_register_child(g_server, argv[2], NULL, (const char **)&argv[3]);
+            if (argc >= 4) return prop_register_child(g_server, argv[2], NULL, (const char **)&argv[3]);
         } else if (!strcmp(argv[1], "register_parent")) {
-            if (argc >= 3) return ctrl_register_parent(g_server, argv[2]);
+            if (argc >= 3) return prop_register_parent(g_server, argv[2]);
         } else if (!strcmp(argv[1], "unregister_child")) {
-            if (argc >= 3) return ctrl_unregister_child(g_server, argv[2]);
+            if (argc >= 3) return prop_unregister_child(g_server, argv[2]);
         } else if (!strcmp(argv[1], "unregister_parent")) {
-            if (argc >= 3) return ctrl_unregister_parent(g_server, argv[2]);
+            if (argc >= 3) return prop_unregister_parent(g_server, argv[2]);
         } else if (!strcmp(argv[1], "dump_db_route")) {
-            return ctrl_dump_db_route(g_server, NULL);
+            return prop_dump_db_route(g_server, NULL);
         } else if (!strcmp(argv[1], "dump_db_cache")) {
-            return ctrl_dump_db_cache(g_server, NULL);
+            return prop_dump_db_cache(g_server, NULL);
         }
     }
 
@@ -73,23 +73,23 @@ static int command_get(int argc, char *argv[]) {
     }
 
     int           ret     = 0;
-    storage_ctx_t storage = {0};
-    if (constructor_unix(&storage, g_server, true)) {
+    storage_t storage = {0};
+    if (prop_unix_storage(&storage, g_server, true)) {
         return -1;
     }
     for (int i = 1; argv[i]; i++) {
         const char    *key   = argv[i];
         const value_t *value = NULL;
-        ret                  = storage_get(&storage, key, &value, NULL);
+        ret                  = prop_storage_get(&storage, key, &value, NULL);
         if (ret == 0) {
             char buffer[512] = {0};
-            puts(value_fmt(buffer, sizeof(buffer), value, true));
+            puts(pd_value_fmt(buffer, sizeof(buffer), value, true));
             free((void *)value);
         } else {
             fprintf(stderr, "fail to get %s (%d)\n", key, ret);
         }
     }
-    storage_destructor(&storage);
+    prop_storage_destructor(&storage);
     return ret;
 }
 
@@ -100,15 +100,15 @@ static int command_set(int argc, char *argv[]) {
     }
 
     int           ret     = 0;
-    storage_ctx_t storage = {0};
-    if (constructor_unix(&storage, g_server, true)) {
+    storage_t storage = {0};
+    if (prop_unix_storage(&storage, g_server, true)) {
         return -1;
     }
     for (int i = 1; argv[i]; i += 2) {
         const char    *key       = argv[i];
         const char    *value_str = argv[i + 1];
-        const value_t *value     = value_parse(value_str);
-        ret                      = storage_set(&storage, key, value);
+        const value_t *value     = pd_value_parse(value_str);
+        ret                      = prop_storage_set(&storage, key, value);
         if (ret == 0) {
             fprintf(stderr, "set %s to %s\n", key, value_str);
         } else {
@@ -116,7 +116,7 @@ static int command_set(int argc, char *argv[]) {
         }
         free((void *)value);
     }
-    storage_destructor(&storage);
+    prop_storage_destructor(&storage);
     return ret;
 }
 
@@ -127,20 +127,20 @@ static int command_del(int argc, char *argv[]) {
     }
 
     int           ret     = 0;
-    storage_ctx_t storage = {0};
-    if (constructor_unix(&storage, g_server, true)) {
+    storage_t storage = {0};
+    if (prop_unix_storage(&storage, g_server, true)) {
         return -1;
     }
     for (int i = 1; argv[i]; i++) {
         const char *key = argv[i];
-        ret             = storage_del(&storage, key);
+        ret             = prop_storage_del(&storage, key);
         if (ret == 0) {
             fprintf(stderr, "del %s\n", key);
         } else {
             fprintf(stderr, "fail to del %s (%d)\n", key, ret);
         }
     }
-    storage_destructor(&storage);
+    prop_storage_destructor(&storage);
     return ret;
 }
 
@@ -168,7 +168,7 @@ int main(int argc, char *argv[]) {
     argv += optind;
 
     if (argc) { /* prop {command} [...] */
-        attach_wait("prop_attach", '.', 2);
+        pd_attach_wait("prop_attach", '.', 2);
         if (!strcmp(argv[0], "ctrl")) {
             return command_ctrl(argc, argv);
         } else if (!strcmp(argv[0], "get")) {

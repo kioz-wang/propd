@@ -37,7 +37,7 @@
 #include <sys/queue.h>
 
 struct route_item {
-    storage_ctx_t storage; /* Note: cannot be a pointer, see `route_deref` */
+    storage_t storage; /* Note: cannot be a pointer, see `route_deref` */
     const char  **prefix;
     atomic_int    nref;
     LIST_ENTRY(route_item) entry;
@@ -54,7 +54,7 @@ LIST_HEAD(route_list, route_item);
  * @param prefix (ref. array of arraydup_cstring)
  * @return route_item_t* On error, return NULL and set errno
  */
-route_item_t *route_item_create(const storage_ctx_t *storage, uint32_t num_prefix, const char *prefix[]);
+route_item_t *route_item_create(const storage_t *storage, uint32_t num_prefix, const char *prefix[]);
 /**
  * @brief Release an item of route
  *
@@ -82,7 +82,7 @@ void route_destroy(void *route);
  */
 void route_init(void *route, struct route_list list);
 
-int __route_register(struct route_list *list, const storage_ctx_t *storage, uint32_t num_prefix, const char *prefix[]);
+int __route_register(struct route_list *list, const storage_t *storage, uint32_t num_prefix, const char *prefix[]);
 /**
  * @brief Register a route item
  *
@@ -92,7 +92,7 @@ int __route_register(struct route_list *list, const storage_ctx_t *storage, uint
  * @param prefix (ref. array of arraydup_cstring)
  * @return int errno (EEXIST ENOMEM)
  */
-int route_register(void *route, const storage_ctx_t *storage, uint32_t num_prefix, const char *prefix[]);
+int route_register(void *route, const storage_t *storage, uint32_t num_prefix, const char *prefix[]);
 /**
  * @brief Unregister a route item by name（如果表项仍被引用，则无法注销）
  *
@@ -109,7 +109,7 @@ int route_unregister(void *route, const char *name);
  * @param storage 返回存储上下文，并增加该表项的引用计数
  * @return int errno (ENOENT)
  */
-int route_match(void *route, const char *key, const storage_ctx_t **storage);
+int route_match(void *route, const char *key, const storage_t **storage);
 
 /**
  * @brief 减少存储上下文所在表项的引用计数
@@ -117,6 +117,6 @@ int route_match(void *route, const char *key, const storage_ctx_t **storage);
  * @param route
  * @param storage
  */
-void route_deref(const storage_ctx_t *storage);
+void route_deref(const storage_t *storage);
 
 #endif /* __PROPD_ROUTE_H */

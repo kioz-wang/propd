@@ -140,7 +140,7 @@ static int ctrl_final0(ctrl_context_t *ctx, void **data, int *data_length) {
     return ret;
 }
 
-int ctrl_register_child(const char *server, const char *name, const char *cache_now[], const char *prefix[]) {
+int prop_register_child(const char *server, const char *name, const char *cache_now[], const char *prefix[]) {
     int            ret           = 0;
     uint32_t       num_cache_now = 0;
     uint32_t       num_prefix    = 0;
@@ -194,14 +194,14 @@ static int ctrl_generic0(const char *server, ctrl_type_t type, const char *name)
     return ret;
 }
 
-int ctrl_register_parent(const char *server, const char *name) {
+int prop_register_parent(const char *server, const char *name) {
     int ret = ctrl_generic0(server, _ctrl_register_parent, name);
     if (ret) logfE(logFmtHead "fail to register self<%s> into <%s>" logFmtRet, server, name, ret);
     else logfI(logFmtHead "register self<%s> into <%s>", server, name);
     return ret;
 }
 
-int ctrl_unregister_child(const char *server, const char *name) {
+int prop_unregister_child(const char *server, const char *name) {
     int ret = 0;
     ret     = ctrl_generic0(server, _ctrl_unregister_child, name);
     if (ret) logfE(logFmtHead "fail to unregister <%s> from <%s>" logFmtRet, name, server, ret);
@@ -209,7 +209,7 @@ int ctrl_unregister_child(const char *server, const char *name) {
     return ret;
 }
 
-int ctrl_unregister_parent(const char *server, const char *name) {
+int prop_unregister_parent(const char *server, const char *name) {
     int ret = ctrl_generic0(server, _ctrl_unregister_parent, name);
     if (ret) logfE(logFmtHead "fail to unregister self<%s> from <%s>" logFmtRet, server, name, ret);
     else logfI(logFmtHead "unregister self<%s> from <%s>", server, name);
@@ -230,13 +230,13 @@ static int ctrl_generic1(const char *server, ctrl_type_t type, void **data, int 
     return ret;
 }
 
-int ctrl_dump_db_route(const char *server, void **db) {
+int prop_dump_db_route(const char *server, void **db) {
     int db_length;
     return ctrl_generic1(server, _ctrl_dump_db_route, db, &db_length);
     /* TODO what's format of db? cstring or complex structure? */
 }
 
-int ctrl_dump_db_cache(const char *server, void **db) {
+int prop_dump_db_cache(const char *server, void **db) {
     int db_length;
     return ctrl_generic1(server, _ctrl_dump_db_cache, db, &db_length);
     /* TODO what's format of db? cstring or complex structure? */

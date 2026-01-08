@@ -37,7 +37,7 @@
 
 struct cleanup_ctx {
     void                *nmtx_ns;
-    const storage_ctx_t *storage;
+    const storage_t *storage;
     const char          *key;
 };
 typedef struct cleanup_ctx cleanup_ctx_t;
@@ -68,7 +68,7 @@ int io_get(const io_ctx_t *io, const char *key, const value_t **value, timestamp
     }
     cleanup_ctx.key = key;
 
-    ret = storage_get(cleanup_ctx.storage, key, value, duration);
+    ret = prop_storage_get(cleanup_ctx.storage, key, value, duration);
     if (!ret) {
         if (io->cache) cache_set(io->cache, key, *value, *duration);
     }
@@ -78,7 +78,7 @@ exit:
     return ret;
 }
 
-int io_update(const io_ctx_t *io, const char *key, const storage_ctx_t *storage) {
+int io_update(const io_ctx_t *io, const char *key, const storage_t *storage) {
     int            ret   = 0;
     const value_t *value = NULL;
     timestamp_t    duration;
@@ -95,7 +95,7 @@ int io_update(const io_ctx_t *io, const char *key, const storage_ctx_t *storage)
     }
     cleanup_ctx.key = key;
 
-    ret = storage_get(storage, key, &value, &duration);
+    ret = prop_storage_get(storage, key, &value, &duration);
     if (!ret) {
         cache_set(io->cache, key, value, duration);
     }
@@ -121,7 +121,7 @@ int io_set(const io_ctx_t *io, const char *key, const value_t *value) {
     }
     cleanup_ctx.key = key;
 
-    ret = storage_set(cleanup_ctx.storage, key, value);
+    ret = prop_storage_set(cleanup_ctx.storage, key, value);
     if (!ret) {
         if (io->cache) cache_set(io->cache, key, value, 0);
     }
@@ -147,7 +147,7 @@ int io_del(const io_ctx_t *io, const char *key) {
     }
     cleanup_ctx.key = key;
 
-    ret = storage_del(cleanup_ctx.storage, key);
+    ret = prop_storage_del(cleanup_ctx.storage, key);
     if (!ret) {
         if (io->cache) cache_del(io->cache, key);
     }

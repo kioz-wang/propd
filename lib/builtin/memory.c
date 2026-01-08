@@ -71,7 +71,7 @@ static int memory_get(const priv_t *priv, const char *key, const value_t **value
     return 0;
 }
 
-int constructor_memory(storage_ctx_t *ctx, const char *name, long phy, const void *layout) {
+int prop_memory_storage(storage_t *ctx, const char *name, long phy, const void *layout) {
     if (!(ctx->name = strdup(name))) {
         logfE(logFmtHead "fail to allocate name" logFmtErrno, logArgErrno);
         return errno;
@@ -111,21 +111,21 @@ int constructor_memory(storage_ctx_t *ctx, const char *name, long phy, const voi
     return 0;
 }
 
-static int parse(storage_ctx_t *ctx, const char *name, const char **args) {
+static int parse(storage_t *ctx, const char *name, const char **args) {
     int    ret    = 0;
     long   phy    = strtoul(args[0], NULL, 16);
     pos_t *layout = layout_parse(args[1]);
     if (!layout) {
         return EINVAL;
     }
-    ret = constructor_memory(ctx, name, phy, layout);
+    ret = prop_memory_storage(ctx, name, phy, layout);
     if (ret) {
         layout_destroy(layout);
     }
     return ret;
 }
 
-storage_parseConfig_t memory_parseConfig = {
+storage_parseConfig_t prop_memory_parseConfig = {
     .name    = "memory",
     .argName = "<PHY>,<LAYOUT>,",
     .note    = "注册类型为memory的存储。PHY是内存地址，LAYOUT是描述内存布局的json文件",

@@ -63,7 +63,7 @@ struct propd_config {
 typedef struct propd_config propd_config_t;
 
 void propd_config_default(propd_config_t *config);
-int  propd_config_register(propd_config_t *config, const storage_ctx_t *storage_ctx, uint32_t num_prefix,
+int  propd_config_register(propd_config_t *config, const storage_t *storage, uint32_t num_prefix,
                            const char *prefix[]);
 
 void propd_config_apply_parser(propd_config_t *config, storage_parseConfig_t *parseConfig);

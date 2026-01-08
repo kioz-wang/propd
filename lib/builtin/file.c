@@ -107,7 +107,7 @@ static int file_del(const char *root, const char *key) {
     return errno;
 }
 
-int constructor_file(storage_ctx_t *ctx, const char *name, const char *dir) {
+int prop_file_storage(storage_t *ctx, const char *name, const char *dir) {
     if (access(dir, F_OK) == -1) {
         int ret = mkdir(dir, 0755);
         if (ret) {
@@ -133,11 +133,9 @@ int constructor_file(storage_ctx_t *ctx, const char *name, const char *dir) {
     return 0;
 }
 
-static int parse(storage_ctx_t *ctx, const char *name, const char **args) {
-    return constructor_file(ctx, name, args[0]);
-}
+static int parse(storage_t *ctx, const char *name, const char **args) { return prop_file_storage(ctx, name, args[0]); }
 
-storage_parseConfig_t file_parseConfig = {
+storage_parseConfig_t prop_file_parseConfig = {
     .name    = "file",
     .argName = "<DIR>,",
     .note    = "注册类型为file的存储。DIR是其根目录",

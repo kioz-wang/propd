@@ -28,7 +28,7 @@
  *  SOFTWARE.
  */
 
-#include "builtin/builtin.h"
+#include "builtin.h"
 #include "global.h"
 
 #define logFmtHead "[storage::(null)] "
@@ -39,7 +39,7 @@ static int set(void *priv __attribute__((unused)), const char *key __attribute__
 }
 static int del(void *priv __attribute__((unused)), const char *key __attribute__((unused))) { return 0; }
 
-int constructor_null(storage_ctx_t *ctx, const char *name) {
+int prop_null_storage(storage_t *ctx, const char *name) {
     if (!(ctx->name = strdup(name))) {
         logfE(logFmtHead "fail to allocate name" logFmtErrno, logArgErrno);
         return errno;

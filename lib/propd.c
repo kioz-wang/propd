@@ -72,7 +72,7 @@ void propd_config_default(propd_config_t *config) {
     LIST_INIT(&config->io_parseConfigs);
 }
 
-int propd_config_register(propd_config_t *config, const storage_ctx_t *storage, uint32_t num_prefix,
+int propd_config_register(propd_config_t *config, const storage_t *storage, uint32_t num_prefix,
                           const char *prefix[]) {
     return __route_register(&config->local_route, storage, num_prefix, prefix);
 }
@@ -253,7 +253,7 @@ void propd_config_parse(propd_config_t *config, int argc, char *argv[]) {
             const char **prefixes = &args[parseConfig->argNum + 1];
 
             int           ret     = 0;
-            storage_ctx_t storage = {0};
+            storage_t storage = {0};
             if ((ret = parseConfig->parse(&storage, name, args))) {
                 fprintf(stderr, "fail to parse a route item named %s" logFmtErrno "\n", name, logArgErrno_(ret));
                 goto error;
@@ -367,7 +367,7 @@ static int __propd_run(const propd_config_t *config, int *syncfd) {
 
     if (!ret && config->children) {
         for (int i = 0; config->children[i]; i++) {
-            ret = ctrl_register_parent(config->children[i], name);
+            ret = prop_register_parent(config->children[i], name);
             if (ret) {
                 logfE(logFmtHead "fail to register <%s> to self" logFmtRet, name, config->children[i], ret);
                 break;
@@ -376,7 +376,7 @@ static int __propd_run(const propd_config_t *config, int *syncfd) {
     }
     if (!ret && config->parents) {
         for (int i = 0; config->parents[i]; i++) {
-            ret = ctrl_register_parent(name, config->parents[i]);
+            ret = prop_register_parent(name, config->parents[i]);
             if (ret) {
                 logfE(logFmtHead "fail to register self to <%s>" logFmtRet, name, config->parents[i], ret);
                 break;
@@ -394,7 +394,7 @@ static int __propd_run(const propd_config_t *config, int *syncfd) {
         signal(SIGINT, nop);
         signal(SIGTERM, nop);
         pause();
-        attach_wait("attach_cleanup", '.', 2);
+        pd_attach_wait("attach_cleanup", '.', 2);
         logfI(logFmtHead "cleanup", name);
     }
 
@@ -413,7 +413,7 @@ static int __propd_run(const propd_config_t *config, int *syncfd) {
     if (io_ctx.route) {
         if (config->parents) {
             for (int i = 0; config->parents[i]; i++) {
-                ctrl_unregister_child(config->parents[i], name);
+                prop_unregister_child(config->parents[i], name);
             }
         }
         route_unregister(io_ctx.route, NULL);

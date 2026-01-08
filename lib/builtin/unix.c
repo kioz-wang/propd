@@ -28,7 +28,7 @@
  *  SOFTWARE.
  */
 
-#include "builtin/builtin.h"
+#include "builtin.h"
 #include "global.h"
 #include "io_server.h"
 #include "misc.h"
@@ -261,7 +261,7 @@ static void destructor(priv_t *priv) {
     free(priv);
 }
 
-int constructor_unix(storage_ctx_t *ctx, const char *name, bool shared) {
+int prop_unix_storage(storage_t *ctx, const char *name, bool shared) {
     if (!(ctx->name = strdup(name))) {
         logfE(logFmtHead "fail to allocate name" logFmtErrno, logArgErrno);
         return errno;
@@ -299,7 +299,7 @@ int constructor_unix(storage_ctx_t *ctx, const char *name, bool shared) {
     return 0;
 }
 
-static int parse(storage_ctx_t *ctx, const char *name, const char **args) {
+static int parse(storage_t *ctx, const char *name, const char **args) {
     const char *type_s = args[0];
     bool        shared = false;
 
@@ -308,10 +308,10 @@ static int parse(storage_ctx_t *ctx, const char *name, const char **args) {
     else if (!strcmp(type_s, "long")) shared = true;
     else return EINVAL;
 
-    return constructor_unix(ctx, name, shared);
+    return prop_unix_storage(ctx, name, shared);
 }
 
-storage_parseConfig_t unix_parseConfig = {
+storage_parseConfig_t prop_unix_parseConfig = {
     .name    = "unix",
     .argName = "[<TYPE>],",
     .note    = "注册类型为unix的存储（与通过--children注册不同的是：不需要child具有ctrl "

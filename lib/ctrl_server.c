@@ -29,7 +29,7 @@
  */
 
 #include "ctrl_server.h"
-#include "builtin/builtin.h"
+#include "builtin.h"
 #include "global.h"
 #include "infra/thread_pool.h"
 #include "io.h"
@@ -70,18 +70,18 @@ typedef struct worker_arg worker_arg_t;
  */
 static int register_child(const io_ctx_t *io_ctx, const ctrl_package_register_child_t *child) {
     int           ret     = 0;
-    storage_ctx_t storage = {0};
+    storage_t storage = {0};
 
     if (!child->num_cache_now && !child->num_prefix) {
         logfE(logFmtHead "deny to register empty child %s", child->name);
         return EINVAL;
     }
 
-    if (constructor_unix(&storage, child->name, false)) {
+    if (prop_unix_storage(&storage, child->name, false)) {
         logfE(logFmtHead "register child %s but" logFmtErrno, child->name, logArgErrno);
         return errno;
     }
-    pthread_cleanup_push((void (*)(void *))storage_destructor, &storage);
+    pthread_cleanup_push((void (*)(void *))prop_storage_destructor, &storage);
 
     for (uint32_t i = 0; i < child->num_cache_now; i++) {
         ret = io_update(io_ctx, child->cache_now_then_prefix[i], &storage);
@@ -142,13 +142,13 @@ static int worker(worker_arg_t *arg) {
         ret = register_child(arg->io_ctx, &arg->package->child);
     } break;
     case _ctrl_register_parent: {
-        ret = ctrl_register_child(arg->package->name, arg->name, arg->cache_now, arg->prefix);
+        ret = prop_register_child(arg->package->name, arg->name, arg->cache_now, arg->prefix);
     } break;
     case _ctrl_unregister_child: {
         ret = unregister_child(arg->io_ctx, arg->package->name);
     } break;
     case _ctrl_unregister_parent: {
-        ret = ctrl_unregister_child(arg->package->name, arg->name);
+        ret = prop_unregister_child(arg->package->name, arg->name);
     } break;
     case _ctrl_dump_db_route: {
         ret = dump_db_route(arg->sockfd, &arg->cliaddr);

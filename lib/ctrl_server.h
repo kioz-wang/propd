@@ -74,7 +74,7 @@ typedef struct ctrl_package ctrl_package_t;
  * @param prefix
  * @return int errno
  */
-int ctrl_register_child(const char *server, const char *name, const char *cache_now[], const char *prefix[]);
+int prop_register_child(const char *server, const char *name, const char *cache_now[], const char *prefix[]);
 /**
  * @brief Make server to register self into another server
  *
@@ -82,7 +82,7 @@ int ctrl_register_child(const char *server, const char *name, const char *cache_
  * @param name another server
  * @return int errno
  */
-int ctrl_register_parent(const char *server, const char *name);
+int prop_register_parent(const char *server, const char *name);
 /**
  * @brief Unregister a route item from server
  *
@@ -90,7 +90,7 @@ int ctrl_register_parent(const char *server, const char *name);
  * @param name 路由表项名
  * @return int errno
  */
-int ctrl_unregister_child(const char *server, const char *name);
+int prop_unregister_child(const char *server, const char *name);
 /**
  * @brief Make server to unregister self from another server
  *
@@ -98,7 +98,7 @@ int ctrl_unregister_child(const char *server, const char *name);
  * @param name another server
  * @return int errno
  */
-int ctrl_unregister_parent(const char *server, const char *name);
+int prop_unregister_parent(const char *server, const char *name);
 /**
  * @brief Dump a route used by a server
  *
@@ -106,7 +106,7 @@ int ctrl_unregister_parent(const char *server, const char *name);
  * @param db
  * @return int errno
  */
-int ctrl_dump_db_route(const char *server, void **db);
+int prop_dump_db_route(const char *server, void **db);
 /**
  * @brief Dump a cache used by a server
  *
@@ -114,7 +114,7 @@ int ctrl_dump_db_route(const char *server, void **db);
  * @param db
  * @return int errno
  */
-int ctrl_dump_db_cache(const char *server, void **db);
+int prop_dump_db_cache(const char *server, void **db);
 
 /* Server APIs */
 

@@ -28,27 +28,27 @@
  *  SOFTWARE.
  */
 
-#include "builtin/builtin.h"
+#include "builtin.h"
 #include "misc.h"
 #include "propd.h"
 
 int main(int argc, char *argv[]) {
     int            ret        = 0;
-    storage_ctx_t  storage    = {0};
+    storage_t  storage    = {0};
     const char    *prefixes[] = {"*", NULL};
     propd_config_t config;
 
     propd_config_default(&config);
 
-    propd_config_apply_parser(&config, &file_parseConfig);
-    propd_config_apply_parser(&config, &unix_parseConfig);
-    propd_config_apply_parser(&config, &memory_parseConfig);
-    propd_config_apply_parser(&config, &tcp_parseConfig);
+    propd_config_apply_parser(&config, &prop_file_parseConfig);
+    propd_config_apply_parser(&config, &prop_unix_parseConfig);
+    propd_config_apply_parser(&config, &prop_memory_parseConfig);
+    propd_config_apply_parser(&config, &prop_tcp_parseConfig);
 
-    attach_wait("propd_attach", '.', 2);
+    pd_attach_wait("propd_attach", '.', 2);
     propd_config_parse(&config, argc, argv);
 
-    ret = constructor_null(&storage, "null");
+    ret = prop_null_storage(&storage, "null");
     if (ret) return ret;
     ret = propd_config_register(&config, &storage, 0, prefixes);
     if (ret) return ret;

@@ -98,6 +98,6 @@ bool prefix_match(const char *prefix, const char *str);
  * @param c putc
  * @param unit sleep how long each time
  */
-void attach_wait(const char *envname, char c, int unit);
+void pd_attach_wait(const char *envname, char c, int unit);
 
 #endif /* __PROPD_MISC_H */
