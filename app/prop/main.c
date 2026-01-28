@@ -29,7 +29,7 @@
  */
 
 #include "builtin.h"
-#include "ctrl_client.h"
+#include "prop.h"
 #include "misc.h"
 #include "storage.h"
 #include <getopt.h>

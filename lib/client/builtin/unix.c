@@ -30,8 +30,8 @@
 
 #include "builtin.h"
 #include "global.h"
-#include "io_server.h"
 #include "misc.h"
+#include "server/io.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>

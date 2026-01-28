@@ -29,8 +29,8 @@
  */
 
 #define _GNU_SOURCE
-#include "ctrl_client.h"
-#include "ctrl_server.h"
+#include "prop.h"
+#include "server/ctrl.h"
 #include "global.h"
 #include "misc.h"
 #include <assert.h>

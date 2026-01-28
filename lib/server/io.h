@@ -3,7 +3,7 @@
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
- * @date 2025-12-26
+ * @date 2025-12-03
  *
  * @copyright MIT License
  *
@@ -28,53 +28,42 @@
  *  SOFTWARE.
  */
 
-#ifndef __PROPD_IO_H
-#define __PROPD_IO_H
+#ifndef __PROPD_IO_SERVER_H
+#define __PROPD_IO_SERVER_H
 
-#include "storage.h"
+#include "infra/timestamp.h"
+#include "io_context.h"
+#include "value.h"
+#include <linux/limits.h>
+#include <stdint.h>
 
-struct io_ctx {
-    void *nmtx_ns;
-    void *cache;
-    void *route;
+enum io_type {
+    _io_get = 0,
+    _io_set,
+    _io_del,
 };
-typedef struct io_ctx io_ctx_t;
+typedef uint8_t io_type_t;
+
+struct io_package {
+    io_type_t   type;
+    timestamp_t created;
+    char        key[NAME_MAX];
+    value_t     value;
+} __attribute__((packed));
+typedef struct io_package io_package_t;
+
+/* Server APIs */
 
 /**
- * @brief Get key on server end
+ * @brief Start IO server
  *
- * @param io
- * @param key
- * @param value
- * @param duration
+ * @param name server节点名
+ * @param thread_pool
+ * @param credbook
+ * @param io_ctx
+ * @param tid 返回IO server线程id，用于终止；传入NULL时，阻塞等待
  * @return int errno
  */
-int io_get(const io_ctx_t *io, const char *key, const value_t **value, timestamp_t *duration);
-/**
- * @brief Update key cache on server end (Only used in register_child of ctrl server)
- *
- * @param io
- * @param key
- * @param storage
- * @return int errno
- */
-int io_update(const io_ctx_t *io, const char *key, const storage_t *storage);
-/**
- * @brief Set key on server end
- *
- * @param io
- * @param key
- * @param value
- * @return int errno
- */
-int io_set(const io_ctx_t *io, const char *key, const value_t *value);
-/**
- * @brief Del key on server end
- *
- * @param io
- * @param key
- * @return int errno
- */
-int io_del(const io_ctx_t *io, const char *key);
+int start_io_server(const char *name, void *thread_pool, const void *credbook, const io_ctx_t *io_ctx, pthread_t *tid);
 
-#endif /* __PROPD_IO_H */
+#endif /* __PROPD_IO_SERVER_H */

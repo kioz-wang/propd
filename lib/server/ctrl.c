@@ -1,5 +1,5 @@
 /**
- * @file ctrl_server.c
+ * @file ctrl.c
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
@@ -28,9 +28,9 @@
  *  SOFTWARE.
  */
 
-#include "ctrl_server.h"
+#include "ctrl.h"
 #include "builtin.h"
-#include "ctrl_client.h"
+#include "prop.h"
 #include "global.h"
 #include "infra/thread_pool.h"
 #include "io.h"
