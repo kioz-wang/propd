@@ -95,6 +95,8 @@ static inline value_t *value_dup(const value_t *value) { return _value_alloc(val
         memcpy(&n, value->data, value->length);                                                                        \
         return n;                                                                                                      \
     }
+
+// TODO 需要时再定义
 static inline _value_to(i32, int32_t);
 static inline _value_to(u32, uint32_t);
 static inline _value_to(i64, int64_t);

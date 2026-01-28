@@ -24,7 +24,6 @@ set(LinkOptions-Debug-Sanitizers -fsanitize=address -fsanitize=address,undefined
 add_compile_options(
     -Wall
     -Wextra
-    -Wpedantic
 
     "$<$<CONFIG:Debug>:${CompileOptions-Debug}>"
     "$<$<CONFIG:Release>:${CompileOptions-Release}>"

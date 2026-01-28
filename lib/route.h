@@ -32,19 +32,7 @@
 #define __PROPD_ROUTE_H
 
 #include "storage.h"
-#include <stdatomic.h>
 #include <stdint.h>
-#include <sys/queue.h>
-
-struct route_item {
-    storage_t storage; /* Note: cannot be a pointer, see `route_deref` */
-    const char  **prefix;
-    atomic_int    nref;
-    LIST_ENTRY(route_item) entry;
-};
-typedef struct route_item route_item_t;
-
-LIST_HEAD(route_list, route_item);
 
 /**
  * @brief Allocate and initialize an item of route
@@ -54,20 +42,25 @@ LIST_HEAD(route_list, route_item);
  * @param prefix (ref. array of arraydup_cstring)
  * @return route_item_t* On error, return NULL and set errno
  */
-route_item_t *route_item_create(const storage_t *storage, uint32_t num_prefix, const char *prefix[]);
+void *route_item_create(const storage_t *storage, uint32_t num_prefix, const char *prefix[]);
 /**
  * @brief Release an item of route
  *
  * @param item maybe null
  */
-void route_item_destroy(route_item_t *item);
+void route_item_destroy(void *item);
+
+void *route_list_create(void);
+void  route_list_destroy(void *list);
+int   route_list_register(void *_list, const storage_t *storage, uint32_t num_prefix, const char *prefix[]);
+int   route_list_unregister(void *_list, const char *name);
 
 /**
  * @brief Allocate and initialize a route
  *
  * @return void* 路由表对象（On error, return NULL and set errno）
  */
-void *route_create(void);
+void *route_create(void *init_list);
 /**
  * @brief Release a route
  *
@@ -78,11 +71,10 @@ void route_destroy(void *route);
  * @brief Initialize route
  *
  * @param route
- * @param list
+ * @param first
  */
-void route_init(void *route, struct route_list list);
+void route_init(void *_route, void *_first);
 
-int __route_register(struct route_list *list, const storage_t *storage, uint32_t num_prefix, const char *prefix[]);
 /**
  * @brief Register a route item
  *

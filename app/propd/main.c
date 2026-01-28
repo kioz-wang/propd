@@ -40,6 +40,8 @@ int main(int argc, char *argv[]) {
 
     propd_config_default(&config);
 
+    config.logger.envname_stderr = "propd_log2stderr";
+
     propd_config_apply_parser(&config, &prop_file_parseConfig);
     propd_config_apply_parser(&config, &prop_unix_parseConfig);
     propd_config_apply_parser(&config, &prop_memory_parseConfig);

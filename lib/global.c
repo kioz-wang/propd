@@ -33,7 +33,7 @@
 
 const char *g_at = "/tmp";
 
-void __attribute__((constructor)) __propd_env_parse(void) {
+static void __attribute__((constructor)) __env_parse(void) {
     const char *namespace_s = getenv("propd_namespace");
     if (namespace_s && namespace_s[0]) {
         g_at = namespace_s;
@@ -41,3 +41,9 @@ void __attribute__((constructor)) __propd_env_parse(void) {
 }
 
 mlogger_t g_logger;
+
+static void __attribute__((constructor)) __logger_init(void) {
+    mlog_init(&g_logger, MLOG_ERRO, NULL, NULL, MLOG_FMT_NEWLINE, NULL,
+              MLOG_FMT_COLOR | MLOG_FMT_TIMESTAMP | MLOG_FMT_LEVEL_HEAD | MLOG_FMT_NEWLINE);
+    mlog_enable_stderr(&g_logger, MLOG_DEBG);
+}
