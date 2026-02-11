@@ -31,9 +31,10 @@
 #ifndef __PROPD_CTRL_SERVER_H
 #define __PROPD_CTRL_SERVER_H
 
-#include "io.h"
+#include "io_context.h"
 #include <linux/limits.h>
 #include <pthread.h>
+#include <stdint.h>
 
 enum ctrl_type {
     _ctrl_register_child = 0, /* child, prefix[] */

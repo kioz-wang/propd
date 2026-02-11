@@ -54,6 +54,12 @@ void random_alnum(char *addr, size_t length) {
     }
 }
 
+char *random_alnum_alloc(size_t length) {
+    char *buffer = malloc(length);
+    if (buffer) random_alnum(buffer, length);
+    return buffer;
+}
+
 const char **arraydup_cstring(const char **array, int num) {
     if (array) {
         if (!num)

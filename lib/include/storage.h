@@ -64,6 +64,7 @@ typedef struct storage storage_t;
  * @return int errno (EOPNOTSUPP ...)
  */
 int prop_storage_get(const storage_t *storage, const char *key, const value_t **value, timestamp_t *duration);
+int prop_storage_info(const storage_t *storage, const char *key, range_t *range, char **help_message, char ***chain);
 /**
  * @brief
  *

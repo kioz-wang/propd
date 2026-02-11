@@ -58,6 +58,12 @@ int prop_storage_get(const storage_t *storage, const char *key, const value_t **
     return 0;
 }
 
+int prop_storage_info(const storage_t *storage, const char *key, range_t *range, char **help_message, char ***chain) {
+    assert(key);
+
+    return 0;
+}
+
 int prop_storage_set(const storage_t *storage, const char *key, const value_t *value) {
     assert(key);
     assert(value);
