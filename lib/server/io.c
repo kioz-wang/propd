@@ -93,6 +93,29 @@ exit:
     return EIO;
 }
 
+static int info(const worker_arg_t *arg, int connfd, const char *key) {
+    int     ret = 0;
+    ssize_t n;
+    range_t range;
+    char   *help_message = NULL;
+    char  **chain        = NULL;
+
+    ret = cred_check(arg->credbook, &arg->cred, _io_get, key);
+
+    if (!ret) {
+        ret = io_info(arg->io_ctx, key, &range, &help_message, &chain);
+    }
+
+    n = send(connfd, &range, sizeof(range), MSG_NOSIGNAL);
+    if (n != sizeof(range)) goto exit;
+    logfD(logFmtHead logFmtKey " >>>%d send range", key, connfd);
+
+    return ret;
+
+exit:
+    return EIO;
+}
+
 static int set(const worker_arg_t *arg, int connfd, const char *key, const value_t *value_head) {
     int      ret = 0;
     ssize_t  n;

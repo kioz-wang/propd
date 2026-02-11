@@ -47,8 +47,8 @@ extern const char *g_at;
 
 #define PathFmt_CtrlServer "%s/propd.%s.ctrl"
 #define PathFmt_IOServer   "%s/propd.%s.io"
-// #define PathFmt_CtrlClient "%s/prop.%s.ctrl"
-// #define PathFmt_IOClient   "%s/prop.%s.io"
+#define PathFmt_CtrlClient "%s/prop.%s.ctrl"
+#define PathFmt_IOClient   "%s/prop.%s.io"
 
 #define logFmtRet       " (%d)"
 #define logFmtErrno     " (%d:%s)"

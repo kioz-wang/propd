@@ -57,6 +57,32 @@ struct value {
 } __attribute__((packed));
 typedef struct value value_t;
 
+struct range {
+    value_type_t type;
+    union {
+        struct {
+            uint32_t max_length;
+        } data;
+        struct {
+            int num;
+            char **choice;
+        } cstring;
+        struct {
+            int64_t left;
+            int64_t right;
+        } ixx;
+        struct {
+            uint64_t left;
+            uint64_t right;
+        } uxx;
+        struct {
+            double left;
+            double right;
+        } f;
+    };
+} __attribute__((packed));
+typedef struct range range_t;
+
 static inline value_t *_value_alloc(value_type_t type, uint32_t length, const void *data) {
     value_t *value = (value_t *)malloc(sizeof(value_t) + length);
     if (value) {

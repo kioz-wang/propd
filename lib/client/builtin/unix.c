@@ -56,7 +56,7 @@ struct priv {
 };
 typedef struct priv priv_t;
 
-static int io_connect(const char *target, int *__connfd) {
+static int __connect(const char *target, int *__connfd) {
     int                ret     = 0;
     struct sockaddr_un cliaddr = {0}, servaddr = {0};
     int                connfd = socket(AF_LOCAL, SOCK_STREAM, 0);
@@ -92,10 +92,61 @@ static int io_connect(const char *target, int *__connfd) {
     return 0;
 }
 
-static void io_disconnect(int connfd) {
+static void __disconnect(int connfd) {
     shutdown(connfd, SHUT_WR);
     close(connfd);
     logfI(logFmtHead "disconnect %d", connfd);
+}
+
+static int unix_connect(priv_t *priv, int *connfd) {
+    if (priv->shared) {
+        *connfd = priv->connfd;
+        pthread_mutex_lock(&priv->mutex);
+    } else {
+        return __connect(priv->target, connfd);
+    }
+    return 0;
+}
+
+static void unix_disconnect(priv_t *priv, int connfd) {
+    if (priv->shared) {
+        pthread_mutex_unlock(&priv->mutex);
+    } else {
+        __disconnect(connfd);
+    }
+}
+
+void unix_stream_discard(int connfd) {
+    ssize_t n;
+    char    discard[16];
+    int     fl = fcntl(connfd, F_GETFL);
+    fcntl(connfd, F_SETFL, fl | O_NONBLOCK);
+    do {
+        n = recv(connfd, discard, sizeof(discard), 0);
+    } while (n > 0 && n == sizeof(discard));
+    fcntl(connfd, F_SETFL, fl);
+}
+
+int unix_recv_cstring(int connfd, char **__cstring) {
+    const int step    = 32;
+    int       count   = 0;
+    char     *cstring = NULL;
+    do {
+        cstring = realloc(cstring, step * (count + 1));
+        if (!cstring) return -1;
+        char *p = &cstring[step * count];
+
+        for (int i = 0; i < step; i++) {
+            if (1 != recv(connfd, p, 1, 0)) {
+                free(cstring);
+                return -1;
+            }
+            if (*p++ == '\0') {
+                *__cstring = cstring;
+                return step * count + i;
+            }
+        }
+    } while (true);
 }
 
 static void io_begin(int connfd, io_type_t type, const char *key, const value_t *value) {
@@ -127,17 +178,6 @@ static int io_end(int connfd, const char *key) {
     return result;
 }
 
-void unix_stream_discard(int connfd) {
-    ssize_t n;
-    char    discard[16];
-    int     fl = fcntl(connfd, F_GETFL);
-    fcntl(connfd, F_SETFL, fl | O_NONBLOCK);
-    do {
-        n = recv(connfd, discard, sizeof(discard), 0);
-    } while (n > 0 && n == sizeof(discard));
-    fcntl(connfd, F_SETFL, fl);
-}
-
 static int get(priv_t *priv, const char *key, const value_t **value, timestamp_t *duration) {
     int         ret    = 0;
     int         connfd = -1;
@@ -145,22 +185,19 @@ static int get(priv_t *priv, const char *key, const value_t **value, timestamp_t
     value_t     value_head;
     value_t    *_value = NULL;
 
-    if (priv->shared) {
-        connfd = priv->connfd;
-        pthread_mutex_lock(&priv->mutex);
-    } else {
-        ret = io_connect(priv->target, &connfd);
-        if (ret) return ret;
-    }
+    ret = unix_connect(priv, &connfd);
+    if (ret) return ret;
 
     io_begin(connfd, _io_get, key, NULL);
 
+    // 1. recv duration
     if (sizeof(_duration) != recv(connfd, &_duration, sizeof(_duration), 0)) {
         ret = EIO;
         goto exit;
     }
     logfD(logFmtHead logFmtKey " <<<%d recv duration %ld", key, connfd, _duration);
 
+    // 2. recv value head
     if (sizeof(value_head) != recv(connfd, &value_head, sizeof(value_head), 0)) {
         ret = EIO;
         goto exit;
@@ -174,6 +211,7 @@ static int get(priv_t *priv, const char *key, const value_t **value, timestamp_t
     }
     memcpy(_value, &value_head, sizeof(value_t));
 
+    // 3. recv value data
     if (_value->length != recv(connfd, _value->data, _value->length, 0)) {
         ret = EIO;
         goto exit;
@@ -185,23 +223,86 @@ static int get(priv_t *priv, const char *key, const value_t **value, timestamp_t
         goto exit;
     }
 
-    if (priv->shared) {
-        pthread_mutex_unlock(&priv->mutex);
-    } else {
-        io_disconnect(connfd);
-    }
+    unix_disconnect(priv, connfd);
     *value    = _value;
     *duration = _duration;
     return 0;
 
 exit:
     unix_stream_discard(connfd);
-    if (priv->shared) {
-        pthread_mutex_unlock(&priv->mutex);
-    } else {
-        io_disconnect(connfd);
-    }
+    unix_disconnect(priv, connfd);
     free(_value);
+    return ret;
+}
+
+static int info(priv_t *priv, const char *key, range_t *range, char **help_message, char ***__chain) {
+    int    ret          = 0;
+    int    connfd       = -1;
+    int    chain_length = 0;
+    char **chain        = NULL;
+
+    ret = unix_connect(priv, &connfd);
+    if (ret) return ret;
+
+    io_begin(connfd, _io_info, key, NULL);
+
+    // 1. recv range
+    if (sizeof(*range) != recv(connfd,  , sizeof(*range), 0)) {
+        ret = EIO;
+        goto exit;
+    }
+    logfD(logFmtHead logFmtKey " <<<%d recv range", key, connfd);
+
+    // 2. recv data
+    if (range->type == _value_cstring) {
+        char **choice = calloc(range->cstring.num + 1, sizeof(char *));
+        if (!choice) {
+            ret = errno;
+            goto exit;
+        }
+
+        for (int i = 0; i < range->cstring.num; i++) {
+            ret = unix_recv_cstring(connfd, &choice[i]);
+            if (ret < 0) {
+                goto exit;
+            }
+            logfD(logFmtHead logFmtKey " <<<%d recv choice \"%s\"", key, connfd, choice[i]);
+        }
+        range->cstring.choice = choice;
+    }
+
+    // 3. recv help massage
+    ret = unix_recv_cstring(connfd, help_message);
+    if (ret < 0) {
+        goto exit;
+    }
+    logfD(logFmtHead logFmtKey " <<<%d recv help message \"%s\"", key, connfd, *help_message);
+
+    // 4. recv chain
+    if (sizeof(chain_length) != recv(connfd, &chain_length, sizeof(chain_length), 0)) {
+        ret = EIO;
+        goto exit;
+    }
+    logfD(logFmtHead logFmtKey " <<<%d recv length of chain %d", key, connfd, chain_length);
+    chain = calloc(chain_length + 1, sizeof(char *));
+    if (!chain) {
+        ret = errno;
+        goto exit;
+    }
+
+    for (int i = 0; i < chain_length; i++) {
+        ret = unix_recv_cstring(connfd, &chain[i]);
+        if (ret < 0) {
+            goto exit;
+        }
+        logfD(logFmtHead logFmtKey " <<<%d chain \"%s\"", key, connfd, chain[i]);
+    }
+    *__chain = chain;
+
+    ret = io_end(connfd, key);
+
+exit:
+    unix_disconnect(priv, connfd);
     return ret;
 }
 
@@ -209,22 +310,13 @@ static int set(priv_t *priv, const char *key, const value_t *value) {
     int ret    = 0;
     int connfd = -1;
 
-    if (priv->shared) {
-        connfd = priv->connfd;
-        pthread_mutex_lock(&priv->mutex);
-    } else {
-        ret = io_connect(priv->target, &connfd);
-        if (ret) return ret;
-    }
+    ret = unix_connect(priv, &connfd);
+    if (ret) return ret;
 
     io_begin(connfd, _io_set, key, value);
     ret = io_end(connfd, key);
 
-    if (priv->shared) {
-        pthread_mutex_unlock(&priv->mutex);
-    } else {
-        io_disconnect(connfd);
-    }
+    unix_disconnect(priv, connfd);
     return ret;
 }
 
@@ -232,28 +324,19 @@ static int del(priv_t *priv, const char *key) {
     int ret    = 0;
     int connfd = -1;
 
-    if (priv->shared) {
-        connfd = priv->connfd;
-        pthread_mutex_lock(&priv->mutex);
-    } else {
-        ret = io_connect(priv->target, &connfd);
-        if (ret) return ret;
-    }
+    ret = unix_connect(priv, &connfd);
+    if (ret) return ret;
 
     io_begin(connfd, _io_del, key, NULL);
     ret = io_end(connfd, key);
 
-    if (priv->shared) {
-        pthread_mutex_unlock(&priv->mutex);
-    } else {
-        io_disconnect(connfd);
-    }
+    unix_disconnect(priv, connfd);
     return ret;
 }
 
 static void destructor(priv_t *priv) {
     if (priv->shared) {
-        io_disconnect(priv->connfd);
+        __disconnect(priv->connfd);
         pthread_mutex_destroy(&priv->mutex);
     } else {
         free((void *)priv->target);
@@ -276,7 +359,7 @@ int prop_unix_storage(storage_t *ctx, const char *name, bool shared) {
 
     if (shared) {
         pthread_mutex_init(&priv->mutex, NULL);
-        int ret = io_connect(name, &priv->connfd);
+        int ret = __connect(name, &priv->connfd);
         if (ret) {
             free(priv);
             free((void *)ctx->name);

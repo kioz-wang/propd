@@ -41,6 +41,7 @@ enum io_type {
     _io_get = 0,
     _io_set,
     _io_del,
+    _io_info,
 };
 typedef uint8_t io_type_t;
 

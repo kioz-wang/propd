@@ -78,6 +78,29 @@ exit:
     return ret;
 }
 
+int io_info(const io_ctx_t *io, const char *key, range_t *range, char **help_message, char ***chain) {
+    int           ret         = 0;
+    cleanup_ctx_t cleanup_ctx = {.nmtx_ns = io->nmtx_ns};
+
+    pthread_cleanup_push((void (*)(void *))cleanup, &cleanup_ctx);
+
+    ret = route_match(io->route, key, &cleanup_ctx.storage);
+    if (ret) goto exit;
+
+    ret = named_mutex_lock(io->nmtx_ns, key);
+    if (ret) {
+        logfE("[server::?] fail to lock " logFmtKey " to get" logFmtRet, key, ret);
+        goto exit;
+    }
+    cleanup_ctx.key = key;
+
+    ret = prop_storage_info(cleanup_ctx.storage, key, range, help_message, chain);
+
+exit:
+    pthread_cleanup_pop(true);
+    return ret;
+}
+
 int io_update(const io_ctx_t *io, const char *key, const storage_t *storage) {
     int            ret   = 0;
     const value_t *value = NULL;

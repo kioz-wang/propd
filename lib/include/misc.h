@@ -44,6 +44,8 @@ void random_alnum(char *addr, size_t length);
  * @return const char**
  */
 const char **arraydup_cstring(const char **array, int num);
+
+char *random_alnum_alloc(size_t length);
 /**
  * @brief Release a cstring's array that terminated with NULL
  *

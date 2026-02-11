@@ -50,6 +50,7 @@ typedef struct io_ctx io_ctx_t;
  * @return int errno
  */
 int io_get(const io_ctx_t *io, const char *key, const value_t **value, timestamp_t *duration);
+int io_info(const io_ctx_t *io, const char *key, range_t *range, char **help_message, char ***chain);
 /**
  * @brief Update key cache on server end (Only used in register_child of ctrl server)
  *
