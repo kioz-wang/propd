@@ -1,5 +1,5 @@
 /**
- * @file main.c
+ * @file builtin.h
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
@@ -28,32 +28,20 @@
  *  SOFTWARE.
  */
 
-#include "propd/builtin.h"
-#include "propd/misc.h"
-#include "propd/propd.h"
+#ifndef __PROPD_BRIDGE_H
+#define __PROPD_BRIDGE_H
 
-int main(int argc, char *argv[]) {
-    int            ret        = 0;
-    storage_t  storage    = {0};
-    const char    *prefixes[] = {"*", NULL};
-    propd_config_t config;
+#include "storage.h"
 
-    propd_config_default(&config);
+int prop_null_storage(storage_t *ctx, const char *name);
+int prop_file_storage(storage_t *ctx, const char *name, const char *dir);
+int prop_unix_storage(storage_t *ctx, const char *name, bool shared);
+int prop_memory_storage(storage_t *ctx, const char *name, long phy, const void *layout);
+int prop_tcp_storage(storage_t *ctx, const char *name, const char *ip, unsigned short port);
 
-    config.logger.envname_stderr = "propd_log2stderr";
+extern storage_parseConfig_t prop_file_parseConfig;
+extern storage_parseConfig_t prop_unix_parseConfig;
+extern storage_parseConfig_t prop_memory_parseConfig;
+extern storage_parseConfig_t prop_tcp_parseConfig;
 
-    propd_config_apply_parser(&config, &prop_file_parseConfig);
-    propd_config_apply_parser(&config, &prop_unix_parseConfig);
-    propd_config_apply_parser(&config, &prop_memory_parseConfig);
-    propd_config_apply_parser(&config, &prop_tcp_parseConfig);
-
-    pd_attach_wait("propd_attach", '.', 2);
-    propd_config_parse(&config, argc, argv);
-
-    ret = prop_null_storage(&storage, "null");
-    if (ret) return ret;
-    ret = propd_config_register(&config, &storage, 0, prefixes);
-    if (ret) return ret;
-
-    return propd_run(&config);
-}
+#endif /* __PROPD_BRIDGE_H */

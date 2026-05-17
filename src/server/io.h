@@ -1,9 +1,9 @@
 /**
- * @file main.c
+ * @file io.h
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
- * @date 2025-12-15
+ * @date 2025-12-03
  *
  * @copyright MIT License
  *
@@ -28,32 +28,25 @@
  *  SOFTWARE.
  */
 
-#include "propd/builtin.h"
-#include "propd/misc.h"
-#include "propd/propd.h"
+#ifndef __PROPD_IO_SERVER_H
+#define __PROPD_IO_SERVER_H
 
-int main(int argc, char *argv[]) {
-    int            ret        = 0;
-    storage_t  storage    = {0};
-    const char    *prefixes[] = {"*", NULL};
-    propd_config_t config;
+#include "shared/io_package.h"
+#include "io_context.h"
+#include <pthread.h>
 
-    propd_config_default(&config);
+/* Server APIs */
 
-    config.logger.envname_stderr = "propd_log2stderr";
+/**
+ * @brief Start IO server
+ *
+ * @param name server节点名
+ * @param thread_pool
+ * @param credbook
+ * @param io_ctx
+ * @param tid 返回IO server线程id，用于终止；传入NULL时，阻塞等待
+ * @return int errno
+ */
+int start_io_server(const char *name, void *thread_pool, const void *credbook, const io_ctx_t *io_ctx, pthread_t *tid);
 
-    propd_config_apply_parser(&config, &prop_file_parseConfig);
-    propd_config_apply_parser(&config, &prop_unix_parseConfig);
-    propd_config_apply_parser(&config, &prop_memory_parseConfig);
-    propd_config_apply_parser(&config, &prop_tcp_parseConfig);
-
-    pd_attach_wait("propd_attach", '.', 2);
-    propd_config_parse(&config, argc, argv);
-
-    ret = prop_null_storage(&storage, "null");
-    if (ret) return ret;
-    ret = propd_config_register(&config, &storage, 0, prefixes);
-    if (ret) return ret;
-
-    return propd_run(&config);
-}
+#endif /* __PROPD_IO_SERVER_H */

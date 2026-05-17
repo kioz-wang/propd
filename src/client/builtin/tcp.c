@@ -1,5 +1,5 @@
 /**
- * @file main.c
+ * @file tcp.c
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
@@ -28,32 +28,43 @@
  *  SOFTWARE.
  */
 
-#include "propd/builtin.h"
-#include "propd/misc.h"
-#include "propd/propd.h"
+#include "builtin.h"
+#include "global.h"
+#include <errno.h>
 
-int main(int argc, char *argv[]) {
-    int            ret        = 0;
-    storage_t  storage    = {0};
-    const char    *prefixes[] = {"*", NULL};
-    propd_config_t config;
+#define logFmtHead "[storage::(tcp)] "
 
-    propd_config_default(&config);
+struct priv {
+    /* TODO */;
+};
+typedef struct priv priv_t;
 
-    config.logger.envname_stderr = "propd_log2stderr";
+int prop_tcp_storage(storage_t *ctx, const char *name, const char *ip, unsigned short port) {
+    if (!(ctx->name = strdup(name))) {
+        logfE(logFmtHead "fail to allocate name" logFmtErrno, logArgErrno);
+        return errno;
+    }
 
-    propd_config_apply_parser(&config, &prop_file_parseConfig);
-    propd_config_apply_parser(&config, &prop_unix_parseConfig);
-    propd_config_apply_parser(&config, &prop_memory_parseConfig);
-    propd_config_apply_parser(&config, &prop_tcp_parseConfig);
+    priv_t *priv = (priv_t *)malloc(sizeof(priv_t));
+    if (!priv) {
+        logfE(logFmtHead "fail to allocate priv" logFmtErrno, logArgErrno);
+        return errno;
+    }
 
-    pd_attach_wait("propd_attach", '.', 2);
-    propd_config_parse(&config, argc, argv);
-
-    ret = prop_null_storage(&storage, "null");
-    if (ret) return ret;
-    ret = propd_config_register(&config, &storage, 0, prefixes);
-    if (ret) return ret;
-
-    return propd_run(&config);
+    ctx->priv       = priv;
+    ctx->destructor = free;
+    return EOPNOTSUPP;
 }
+
+static int parse(storage_t *ctx, const char *name, const char **args) {
+    unsigned short port = strtoul(args[1], NULL, 0);
+    return prop_tcp_storage(ctx, name, args[0], port);
+}
+
+storage_parseConfig_t prop_tcp_parseConfig = {
+    .name    = "tcp",
+    .argName = "<IP>,<PORT>,",
+    .note    = "注册类型为tcp的本地IO。IP，PORT是tcp IO需要连接的目标",
+    .argNum  = 2,
+    .parse   = parse,
+};

@@ -24,7 +24,6 @@ set(LinkOptions-Debug-Sanitizers -fsanitize=address -fsanitize=address,undefined
 add_compile_options(
     -Wall
     -Wextra
-    -Wpedantic
 
     "$<$<CONFIG:Debug>:${CompileOptions-Debug}>"
     "$<$<CONFIG:Release>:${CompileOptions-Release}>"
@@ -43,5 +42,5 @@ add_link_options(
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-add_subdirectory(lib)
+add_subdirectory(src)
 add_subdirectory(app)

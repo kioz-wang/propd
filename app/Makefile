@@ -14,10 +14,11 @@ OBJ_DIR = $(BUILD_DIR)/obj/bin
 BIN_DIR = $(BUILD_DIR)/bin
 
 # 包含路径
-INCLUDES = -I../lib
+INCLUDES = -I../include
 
 # 从 lib 导入
-LIB_TARGET ?= $(BUILD_DIR)/lib/libpropd.so
+LIB_PROP_TARGET ?= $(BUILD_DIR)/lib/libprop.so
+LIB_PROPD_TARGET ?= $(BUILD_DIR)/lib/libpropd.so
 LIB_DIR ?= $(BUILD_DIR)/lib
 
 # 链接选项

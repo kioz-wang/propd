@@ -1,5 +1,5 @@
 # 顶层 Makefile
-.PHONY: all lib app clean help
+.PHONY: all src app clean help
 
 # 编译器设置
 CC = gcc
@@ -9,12 +9,12 @@ CFLAGS = -std=gnu11 -Wall -Wextra -fPIC
 BUILD_DIR = build
 
 # 默认目标
-all: lib app
+all: src app
 
 # 构建库
-lib:
-	@echo "=== Building library ==="
-	@$(MAKE) --no-print-directory -C lib
+src:
+	@echo "=== Building libraries ==="
+	@$(MAKE) --no-print-directory -C src
 
 # 构建可执行文件
 app:
@@ -24,7 +24,7 @@ app:
 # 清理
 clean:
 	@echo "=== Cleaning ==="
-	@$(MAKE) --no-print-directory -C lib clean
+	@$(MAKE) --no-print-directory -C src clean
 	@$(MAKE) --no-print-directory -C app clean
 	@rm -rf $(BUILD_DIR)
 

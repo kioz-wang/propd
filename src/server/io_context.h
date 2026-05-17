@@ -1,9 +1,9 @@
 /**
- * @file main.c
+ * @file io_context.h
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
- * @date 2025-12-15
+ * @date 2025-12-26
  *
  * @copyright MIT License
  *
@@ -28,32 +28,54 @@
  *  SOFTWARE.
  */
 
-#include "propd/builtin.h"
-#include "propd/misc.h"
-#include "propd/propd.h"
+#ifndef __PROPD_IO_H
+#define __PROPD_IO_H
 
-int main(int argc, char *argv[]) {
-    int            ret        = 0;
-    storage_t  storage    = {0};
-    const char    *prefixes[] = {"*", NULL};
-    propd_config_t config;
+#include "storage.h"
 
-    propd_config_default(&config);
+struct io_ctx {
+    void *nmtx_ns;
+    void *cache;
+    void *route;
+};
+typedef struct io_ctx io_ctx_t;
 
-    config.logger.envname_stderr = "propd_log2stderr";
+/**
+ * @brief Get key on server end
+ *
+ * @param io
+ * @param key
+ * @param value
+ * @param duration
+ * @return int errno
+ */
+int io_get(const io_ctx_t *io, const char *key, const value_t **value, timestamp_t *duration);
+int io_info(const io_ctx_t *io, const char *key, range_t *range, char **help_message, char ***chain);
+/**
+ * @brief Update key cache on server end (Only used in register_child of ctrl server)
+ *
+ * @param io
+ * @param key
+ * @param storage
+ * @return int errno
+ */
+int io_update(const io_ctx_t *io, const char *key, const storage_t *storage);
+/**
+ * @brief Set key on server end
+ *
+ * @param io
+ * @param key
+ * @param value
+ * @return int errno
+ */
+int io_set(const io_ctx_t *io, const char *key, const value_t *value);
+/**
+ * @brief Del key on server end
+ *
+ * @param io
+ * @param key
+ * @return int errno
+ */
+int io_del(const io_ctx_t *io, const char *key);
 
-    propd_config_apply_parser(&config, &prop_file_parseConfig);
-    propd_config_apply_parser(&config, &prop_unix_parseConfig);
-    propd_config_apply_parser(&config, &prop_memory_parseConfig);
-    propd_config_apply_parser(&config, &prop_tcp_parseConfig);
-
-    pd_attach_wait("propd_attach", '.', 2);
-    propd_config_parse(&config, argc, argv);
-
-    ret = prop_null_storage(&storage, "null");
-    if (ret) return ret;
-    ret = propd_config_register(&config, &storage, 0, prefixes);
-    if (ret) return ret;
-
-    return propd_run(&config);
-}
+#endif /* __PROPD_IO_H */

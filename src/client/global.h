@@ -1,9 +1,9 @@
 /**
- * @file main.c
+ * @file global.h
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
- * @date 2025-12-15
+ * @date 2025-12-04
  *
  * @copyright MIT License
  *
@@ -28,32 +28,33 @@
  *  SOFTWARE.
  */
 
-#include "propd/builtin.h"
-#include "propd/misc.h"
-#include "propd/propd.h"
+#ifndef __PROPD_GLOBAL_H
+#define __PROPD_GLOBAL_H
 
-int main(int argc, char *argv[]) {
-    int            ret        = 0;
-    storage_t  storage    = {0};
-    const char    *prefixes[] = {"*", NULL};
-    propd_config_t config;
+#include "logger.h"
+#include <errno.h>
+#include <string.h>
 
-    propd_config_default(&config);
+extern mlogger_t g_logger;
 
-    config.logger.envname_stderr = "propd_log2stderr";
+#define logfE(fmt, ...) mlogf(&g_logger, MLOG_ERRO, fmt, ##__VA_ARGS__)
+#define logfW(fmt, ...) mlogf(&g_logger, MLOG_WARN, fmt, ##__VA_ARGS__)
+#define logfI(fmt, ...) mlogf(&g_logger, MLOG_INFO, fmt, ##__VA_ARGS__)
+#define logfV(fmt, ...) mlogf(&g_logger, MLOG_VERB, fmt, ##__VA_ARGS__)
+#define logfD(fmt, ...) mlogf(&g_logger, MLOG_DEBG, fmt, ##__VA_ARGS__)
 
-    propd_config_apply_parser(&config, &prop_file_parseConfig);
-    propd_config_apply_parser(&config, &prop_unix_parseConfig);
-    propd_config_apply_parser(&config, &prop_memory_parseConfig);
-    propd_config_apply_parser(&config, &prop_tcp_parseConfig);
+extern const char *g_at;
 
-    pd_attach_wait("propd_attach", '.', 2);
-    propd_config_parse(&config, argc, argv);
+#define PathFmt_CtrlServer "%s/propd.%s.ctrl"
+#define PathFmt_IOServer   "%s/propd.%s.io"
+#define PathFmt_CtrlClient "%s/prop.%s.ctrl"
+#define PathFmt_IOClient   "%s/prop.%s.io"
 
-    ret = prop_null_storage(&storage, "null");
-    if (ret) return ret;
-    ret = propd_config_register(&config, &storage, 0, prefixes);
-    if (ret) return ret;
+#define logFmtRet       " (%d)"
+#define logFmtErrno     " (%d:%s)"
+#define logArgErrno     errno, strerror(errno)
+#define logArgErrno_(e) (e), strerror(e)
+#define logFmtKey       "<%s>"
+#define logFmtValue     "\"%s\""
 
-    return propd_run(&config);
-}
+#endif /* __PROPD_GLOBAL_H */
