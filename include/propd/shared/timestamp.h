@@ -1,7 +1,7 @@
 /**
  * @file timestamp.h
  * @author kioz.wang (never.had@outlook.com)
- * @brief
+ * @brief Monotonic timestamp utilities (public API)
  * @version 0.1
  * @date 2025-12-03
  *
@@ -80,5 +80,14 @@ static inline timestamp_t feature(bool monotonic, unsigned int ms) { return time
 #define timestamp_from_s(s)   ((timestamp_t)(s) * 1000000000L)
 #define timestamp_to_ms(t)    ((t) / 1000000L)
 #define timestamp_to_s(t)     ((t) / 1000000000L)
+
+#define DURATION_INF (INT64_MAX)
+
+#include <stdio.h>
+static inline const char *duration_fmt(char *buffer, size_t length, timestamp_t duration) {
+    if (DURATION_INF == duration) snprintf(buffer, length, "inf");
+    else snprintf(buffer, length, "%ldms", timestamp_to_ms(duration));
+    return buffer;
+}
 
 #endif /* __TIMESTAMP_H */

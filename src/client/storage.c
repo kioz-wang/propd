@@ -29,7 +29,6 @@
  */
 
 #include "storage.h"
-#include "cache.h"
 #include "global.h"
 #include <errno.h>
 

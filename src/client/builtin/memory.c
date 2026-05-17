@@ -29,7 +29,6 @@
  */
 
 #include "builtin.h"
-#include "cache.h"
 #include "global.h"
 #include "memio/layout.h"
 #include <errno.h>

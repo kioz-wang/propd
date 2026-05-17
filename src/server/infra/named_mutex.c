@@ -29,7 +29,7 @@
  */
 
 #include "named_mutex.h"
-#include "tree.h"
+#include "shared/tree.h"
 #include <assert.h>
 #include <errno.h>
 #include <pthread.h>

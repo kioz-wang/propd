@@ -28,9 +28,9 @@
  *  SOFTWARE.
  */
 
-#include "builtin.h"
-#include "misc.h"
-#include "propd.h"
+#include "propd/builtin.h"
+#include "propd/misc.h"
+#include "propd/propd.h"
 
 int main(int argc, char *argv[]) {
     int            ret        = 0;

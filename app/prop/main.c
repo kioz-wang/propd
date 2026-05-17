@@ -28,10 +28,10 @@
  *  SOFTWARE.
  */
 
-#include "builtin.h"
-#include "prop.h"
-#include "misc.h"
-#include "storage.h"
+#include "propd/builtin.h"
+#include "propd/prop.h"
+#include "propd/misc.h"
+#include "propd/storage.h"
 #include <getopt.h>
 #include <stdio.h>
 #include <string.h>

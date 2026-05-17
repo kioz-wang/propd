@@ -30,7 +30,7 @@
 
 #define _GNU_SOURCE
 #include "misc.h"
-#include "infra/timestamp.h"
+#include "shared/timestamp.h"
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>

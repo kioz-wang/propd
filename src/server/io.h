@@ -31,27 +31,9 @@
 #ifndef __PROPD_IO_SERVER_H
 #define __PROPD_IO_SERVER_H
 
-#include "infra/timestamp.h"
+#include "shared/io_package.h"
 #include "io_context.h"
-#include "value.h"
-#include <linux/limits.h>
-#include <stdint.h>
-
-enum io_type {
-    _io_get = 0,
-    _io_set,
-    _io_del,
-    _io_info,
-};
-typedef uint8_t io_type_t;
-
-struct io_package {
-    io_type_t   type;
-    timestamp_t created;
-    char        key[NAME_MAX];
-    value_t     value;
-} __attribute__((packed));
-typedef struct io_package io_package_t;
+#include <pthread.h>
 
 /* Server APIs */
 

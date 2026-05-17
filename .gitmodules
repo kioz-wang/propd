@@ -1,6 +1,6 @@
-[submodule "lib/mlogger"]
-	path = lib/mlogger
+[submodule "vendor/mlogger"]
+	path = vendor/mlogger
 	url = git@github.com:kioz-wang/mlogger.git
-[submodule "lib/memio"]
-	path = lib/memio
+[submodule "vendor/memio"]
+	path = vendor/memio
 	url = git@github.com:kioz-wang/memio.git

@@ -31,7 +31,7 @@
 #ifndef __PROPD_H
 #define __PROPD_H
 
-#include "infra/timestamp.h"
+#include "shared/timestamp.h"
 #include "storage.h"
 #include <sys/queue.h>
 

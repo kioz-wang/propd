@@ -30,7 +30,7 @@
 
 #include "thread_pool.h"
 #include "global.h"
-#include "infra/timestamp.h"
+#include "shared/timestamp.h"
 #include <assert.h>
 #include <errno.h>
 #include <pthread.h>

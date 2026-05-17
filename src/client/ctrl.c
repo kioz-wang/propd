@@ -30,7 +30,7 @@
 
 #define _GNU_SOURCE
 #include "prop.h"
-#include "server/ctrl.h"
+#include "shared/ctrl_package.h"
 #include "global.h"
 #include "misc.h"
 #include <assert.h>

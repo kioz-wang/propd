@@ -31,15 +31,11 @@
 #ifndef __PROPD_CACHE_H
 #define __PROPD_CACHE_H
 
-#include "infra/timestamp.h"
+#include "shared/timestamp.h"
 #include "value.h"
 #include <pthread.h>
 #include <semaphore.h>
 #include <stdbool.h>
-
-#define DURATION_INF (INT64_MAX)
-
-const char *duration_fmt(char *buffer, size_t length, timestamp_t duration);
 
 /**
  * @brief Allocate and initialize a cache, and start a cleaner

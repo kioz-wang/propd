@@ -30,7 +30,7 @@
 
 #include "cache.h"
 #include "global.h"
-#include "infra/tree.h"
+#include "shared/tree.h"
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -94,12 +94,6 @@ exit:
 }
 
 #define duration_is_outdate(item, now) (item)->duration != DURATION_INF && (item)->modified + (item)->duration <= (now)
-
-const char *duration_fmt(char *buffer, size_t length, timestamp_t duration) {
-    if (DURATION_INF == duration) snprintf(buffer, length, "inf");
-    else snprintf(buffer, length, "%ldms", timestamp_to_ms(duration));
-    return buffer;
-}
 
 static void *cache_cleaner(void *_arg) {
     cache_t    *cache = (cache_t *)_arg;
