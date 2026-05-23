@@ -33,6 +33,7 @@
 #include "global.h"
 #include "infra/thread_pool.h"
 #include <errno.h>
+#include <fcntl.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,8 +48,6 @@ static int cred_check(const void *credbook, const struct ucred *cred, io_type_t 
     /* TODO */
     return ret;
 }
-
-extern void unix_stream_discard(int connfd);
 
 struct worker_arg {
     const void     *credbook;
@@ -124,7 +123,14 @@ static int set(const worker_arg_t *arg, int connfd, const char *key, const value
     value = malloc(sizeof(value_t) + value_head->length);
     if (!value) {
         logfE(logFmtHead logFmtKey " <<<%d no memory to recv data of value, discard it", key, connfd);
-        unix_stream_discard(connfd);
+        {
+            ssize_t _n;
+            char    _discard[16];
+            int     _fl = fcntl(connfd, F_GETFL);
+            fcntl(connfd, F_SETFL, _fl | O_NONBLOCK);
+            do { _n = recv(connfd, _discard, sizeof(_discard), 0); } while (_n > 0 && _n == (ssize_t)sizeof(_discard));
+            fcntl(connfd, F_SETFL, _fl);
+        }
         return ENOMEM;
     }
 
