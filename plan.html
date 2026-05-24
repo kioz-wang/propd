@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>propd · Design Plan</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#f8f9fb; --card:#fff; --text:#1a1d28; --muted:#5f6b7a;
+    --border:#e2e6ed; --accent:#2563eb; --accent-dim:#dbeafe;
+    --red:#dc2626; --red-bg:#fef2f2; --red-border:#fecaca;
+    --amber:#d97706; --amber-bg:#fffbeb; --amber-border:#fde68a;
+    --blue:#2563eb; --blue-bg:#eff6ff; --blue-border:#bfdbfe;
+    --green:#16a34a; --green-bg:#f0fdf4; --green-border:#bbf7d0;
+    --gray:#6b7280; --gray-bg:#f9fafb; --gray-border:#e5e7eb;
+    --code-bg:#1e293b; --code-text:#e2e8f0;
+    --sidebar-w:240px;
+    font-size:15px;
+  }
+  body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.65;display:flex}
+  /* sidebar */
+  aside{position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;background:var(--card);border-right:1px solid var(--border);padding:2rem 1.5rem;overflow-y:auto;z-index:10}
+  aside h2{font-size:.75rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:1.25rem}
+  aside a{display:block;padding:.45rem .75rem;border-radius:6px;color:var(--muted);text-decoration:none;font-size:.88rem;margin-bottom:2px;transition:all .15s}
+  aside a:hover{background:var(--accent-dim);color:var(--accent)}
+  /* main */
+  main{margin-left:var(--sidebar-w);flex:1;min-height:100vh;padding:3rem 4rem;max-width:calc(960px + var(--sidebar-w))}
+  header{margin-bottom:3rem}
+  header h1{font-size:2rem;font-weight:700;letter-spacing:-.02em;margin-bottom:.35rem}
+  header p{color:var(--muted);font-size:.95rem}
+  /* cards */
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:2rem;margin-bottom:2rem;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  .card h2{font-size:1.25rem;font-weight:650;margin-bottom:1.25rem;display:flex;align-items:center;gap:.6rem}
+  .card h2 .num{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:var(--accent-dim);color:var(--accent);font-size:.85rem;font-weight:700;flex-shrink:0}
+  .card h3{font-size:1rem;font-weight:600;margin:1.5rem 0 .6rem}
+  .card h3:first-of-type{margin-top:0}
+  .card p{margin-bottom:.85rem;color:var(--muted)}
+  .card p strong{color:var(--text)}
+  /* badges */
+  .pri{display:inline-flex;align-items:center;gap:4px;padding:1px 10px;border-radius:99px;font-size:.75rem;font-weight:650;letter-spacing:.03em;white-space:nowrap}
+  .pri-p0{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+  .pri-p1{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}
+  .pri-p2{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)}
+  .pri-p3{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+  .pri-p4{background:var(--gray-bg);color:var(--gray);border:1px solid var(--gray-border)}
+  .pri::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%}
+  .pri-p0::before{background:var(--red)}
+  .pri-p1::before{background:var(--amber)}
+  .pri-p2::before{background:var(--blue)}
+  .pri-p3::before{background:var(--green)}
+  .pri-p4::before{background:var(--gray)}
+  /* tables */
+  table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+  th{text-align:left;padding:.6rem .8rem;color:var(--muted);font-weight:600;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--border)}
+  td{padding:.65rem .8rem;border-bottom:1px solid var(--border);vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  .row-p0 td:first-child{border-left:3px solid var(--red)}
+  .row-p1 td:first-child{border-left:3px solid var(--amber)}
+  .row-p2 td:first-child{border-left:3px solid var(--blue)}
+  .row-p3 td:first-child{border-left:3px solid var(--green)}
+  /* code / pre */
+  pre{background:var(--code-bg);color:var(--code-text);padding:1.2rem 1.4rem;border-radius:10px;overflow-x:auto;font-family:'JetBrains Mono','Fira Code','Cascadia Code',monospace;font-size:.82rem;line-height:1.55;margin:1rem 0}
+  code{font-family:'JetBrains Mono','Fira Code','Cascadia Code',monospace;font-size:.88em}
+  :not(pre)>code{background:var(--gray-bg);border:1px solid var(--gray-border);padding:1px 6px;border-radius:4px;color:var(--accent)}
+  /* diagram */
+  .diagram{display:grid;grid-template-columns:1fr 40px 1fr;gap:0;margin:1.2rem 0;font-size:.84rem;align-items:start}
+  .diagram .col{padding:.8rem 1rem;border:1px solid var(--border);border-radius:8px;background:var(--gray-bg)}
+  .diagram .col h4{font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:.5rem}
+  .diagram .arrow{display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:var(--muted)}
+  .diagram .row{display:flex;align-items:center;gap:.3rem;padding:2px 0}
+  .diagram .row .who{color:var(--muted);font-size:.75rem;min-width:3em}
+  .diagram .sep{margin-top:.5rem;padding-top:.5rem;border-top:1px dashed var(--border)}
+  /* flow */
+  .flow{display:flex;flex-direction:column;gap:6px;margin:1rem 0;font-family:'JetBrains Mono','Fira Code',monospace;font-size:.82rem}
+  .flow .step{display:flex;gap:.8rem;align-items:baseline}
+  .flow .step .idx{color:var(--muted);font-size:.75rem;min-width:1.5em;text-align:right}
+  .flow .step .act{color:var(--blue)}
+  .flow .step .srv{color:var(--green)}
+  .flow .step .sto{color:var(--amber)}
+  .flow .step .info{color:var(--muted)}
+  /* callout */
+  .callout{padding:.8rem 1rem;border-radius:8px;margin:1rem 0;font-size:.88rem}
+  .callout-warn{background:var(--amber-bg);border:1px solid var(--amber-border);color:#92400e}
+  .callout-info{background:var(--blue-bg);border:1px solid var(--blue-border);color:#1e40af}
+  .callout-good{background:var(--green-bg);border:1px solid var(--green-border);color:#166534}
+  /* stats */
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin:1rem 0}
+  .stat{background:var(--gray-bg);border:1px solid var(--border);border-radius:10px;padding:1.2rem;text-align:center}
+  .stat .val{font-size:1.8rem;font-weight:700;color:var(--accent)}
+  .stat .lbl{font-size:.78rem;color:var(--muted);margin-top:.3rem}
+  /* timeline */
+  .done-list{display:flex;flex-wrap:wrap;gap:.5rem;list-style:none}
+  .done-list li{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);padding:.3rem .8rem;border-radius:99px;font-size:.83rem}
+  .done-list li::before{content:'✓ '}
+  hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+  footer{color:var(--muted);font-size:.8rem}
+  @media(max-width:900px){aside{display:none}main{margin-left:0;padding:2rem 1.5rem}}
+</style>
+</head>
+<body>
+
+<aside>
+  <h2>Navigation</h2>
+  <a href="#overview">协议总览</a>
+  <a href="#io">IO PDU &amp; 时序</a>
+  <a href="#ctrl">Ctrl PDU</a>
+  <a href="#reg">注册/反注册</a>
+  <a href="#identity">身份追溯</a>
+  <a href="#append">Append 模式</a>
+  <a href="#issues">问题汇总</a>
+  <a href="#suggestions">改进建议</a>
+  <a href="#other">其他议题</a>
+  <a href="#done">已完成</a>
+  <a href="#priority">优先级</a>
+</aside>
+
+<main>
+
+<header>
+  <h1>propd · Design Plan</h1>
+  <p>Protocol review, issue tracking &amp; improvement roadmap — 2026-05-24</p>
+</header>
+
+<!-- ================================================================ -->
+<section id="overview" class="card">
+  <h2><span class="num">1</span> 协议总览</h2>
+
+  <div class="stat-grid">
+    <div class="stat"><div class="val">269 B</div><div class="lbl">IO 请求头 (固定)</div></div>
+    <div class="stat"><div class="val">256+ B</div><div class="lbl">Ctrl 请求 (最小)</div></div>
+    <div class="stat"><div class="val">3 段</div><div class="lbl">get 响应 (不对称)</div></div>
+    <div class="stat"><div class="val">~4%</div><div class="lbl">Ctrl 有效载荷率</div></div>
+  </div>
+
+  <h3>IO 协议 <code>SOCK_STREAM</code></h3>
+  <table>
+    <tr><th>操作</th><th>请求大小</th><th>响应段数</th><th>响应内容</th></tr>
+    <tr><td><code>_io_get</code></td><td>269 B</td><td><span class="pri pri-p0">3 段</span></td><td>duration → value → result</td></tr>
+    <tr><td><code>_io_set</code></td><td>269 + value B</td><td>1 段</td><td>result</td></tr>
+    <tr><td><code>_io_del</code></td><td>269 B</td><td>1 段</td><td>result</td></tr>
+    <tr><td><code>_io_info</code></td><td>269 B</td><td>多段</td><td>range → choices → help → chain → result</td></tr>
+  </table>
+
+  <h3>Ctrl 协议 <code>SOCK_DGRAM</code></h3>
+  <table>
+    <tr><th>type</th><th>操作</th><th>大小</th></tr>
+    <tr><td>0</td><td>register_child</td><td>264 + N×255</td></tr>
+    <tr><td>1</td><td>register_parent</td><td>256</td></tr>
+    <tr><td>2</td><td>unregister_child</td><td>256</td></tr>
+    <tr><td>3</td><td>unregister_parent</td><td>256</td></tr>
+    <tr><td>4,5</td><td>dump_db_*</td><td>256 (TODO)</td></tr>
+    <tr><td colspan="3" style="color:var(--muted)">响应: 所有操作统一返回 4B result (sendto)</td></tr>
+  </table>
+</section>
+
+<!-- ================================================================ -->
+<section id="io" class="card">
+  <h2><span class="num">2</span> IO PDU &amp; C/S 时序</h2>
+
+  <h3>请求头布局</h3>
+  <pre>io_package_t  269 字节  __attribute__((packed))
+
+  Offset   Bytes   Field
+  ─────────────────────────────────────
+     0       1     type          io_type_t (get=0 set=1 del=2 info=3)
+     1       8     created       timestamp (ns)
+     9     255     key[]         NAME_MAX, 零填充
+   264       5     value         仅 header: type(1B) + length(4B)
+  ─────────────────────────────────────
+  + 可选: value.length 字节数据 (仅 _io_set)</pre>
+
+  <h3>get 时序</h3>
+  <div class="diagram">
+    <div class="col">
+      <h4>Client</h4>
+      <div class="row"><span class="who">T1</span> us_open_at() → connect</div>
+      <div class="row"><span class="who">T2</span> io_begin(_io_get)</div>
+      <div class="row sep"><span class="who">T3</span> us_read(duration, 8B)</div>
+      <div class="row"><span class="who">T4</span> us_read_auto(value)</div>
+      <div class="row"><span class="who">T5</span> us_read(result, 4B)</div>
+      <div class="row sep"><span class="who">T6</span> us_close()</div>
+    </div>
+    <div class="arrow">⇄</div>
+    <div class="col">
+      <h4>Server</h4>
+      <div class="row"><span class="who">—</span> accept() → thread_pool</div>
+      <div class="row"><span class="who">—</span> recv(pkg_head, 269B)</div>
+      <div class="row sep"><span class="who">—</span> cache_get → ENOENT</div>
+      <div class="row"><span class="who">—</span> route_match → &amp;storage</div>
+      <div class="row"><span class="who">—</span> named_mutex_lock</div>
+      <div class="row"><span class="who">—</span> prop_storage_get()</div>
+      <div class="row sep"><span class="who">—</span> send(duration) ← handler 内!</div>
+      <div class="row"><span class="who">—</span> send(value)</div>
+      <div class="row sep"><span class="who">—</span> send(result) ← worker 循环</div>
+      <div class="row"><span class="who">—</span> recv(下一个请求)</div>
+    </div>
+  </div>
+  <div class="callout callout-warn">
+    <strong>⚠ 不对称</strong>: handler 直接 send() duration+value (①②段), worker 循环 send result (③段)。发送逻辑分散在两个函数里。
+  </div>
+
+  <h3>set 时序</h3>
+  <div class="flow">
+    <div class="step"><span class="idx">C→</span><span class="act">us_write(pkg_head, 269B)</span></div>
+    <div class="step"><span class="idx">C→</span><span class="act">us_write(value_data, len)</span></div>
+    <div class="step"><span class="idx">S:</span><span class="info">recv → malloc(value) → cred_check → io_set()</span></div>
+    <div class="step"><span class="idx">C←</span><span class="srv">us_read(result, 4B)</span></div>
+  </div>
+  <div class="callout callout-warn">
+    <strong>⚠ ENOMEM bug</strong>: malloc 失败后 server 直接 return，<em>不 send result</em>。客户端在 io_end() 永久阻塞。
+  </div>
+
+  <h3>del / info 时序</h3>
+  <p style="color:var(--muted)">del: 请求 → io_del() → result。info: 请求 → range → choices[N] → help → chain[N] → result。</p>
+</section>
+
+<!-- ================================================================ -->
+<section id="ctrl" class="card">
+  <h2><span class="num">3</span> Ctrl PDU</h2>
+
+  <h3>C/S 交互</h3>
+  <div class="flow">
+    <div class="step"><span class="idx">C:</span><span class="info">socket() → bind(abstract) → malloc(包)</span></div>
+    <div class="step"><span class="idx">C:</span><span class="info">填充字段 → sendto()</span></div>
+    <div class="step"><span class="idx">S:</span><span class="info">recvfrom(pkg, max) → thread_pool_submit(worker)</span></div>
+    <div class="step"><span class="idx">S:</span><span class="info">switch(type): register / unregister / dump</span></div>
+    <div class="step"><span class="idx">S:</span><span class="info">sendto(result, 4B)</span></div>
+    <div class="step"><span class="idx">C:</span><span class="info">recvfrom(result) → close()</span></div>
+  </div>
+
+  <h3>有效载荷效率</h3>
+  <table>
+    <tr><th>操作</th><th>传输字节</th><th>有效字节</th><th>效率</th></tr>
+    <tr><td>register_child("db", 1 cache, 2 prefix)</td><td>1,029</td><td>~41</td><td><span class="pri pri-p0">4.0%</span></td></tr>
+    <tr><td>unregister_child("db")</td><td>256</td><td>~3</td><td><span class="pri pri-p0">1.2%</span></td></tr>
+  </table>
+</section>
+
+<!-- ================================================================ -->
+<section id="reg" class="card">
+  <h2><span class="num">4</span> 注册 / 反注册机制</h2>
+
+  <table>
+    <tr><th>问题</th><th>严重度</th><th>描述</th></tr>
+    <tr class="row-p1">
+      <td>组包/解包无封装</td>
+      <td><span class="pri pri-p1">P1</span></td>
+      <td>每个 API 重复 ctrl_init → 填字段 → ctrl_update → ctrl_final0。register_child 自己写 ~25 行填充逻辑</td>
+    </tr>
+    <tr class="row-p0">
+      <td>解包无边界校验</td>
+      <td><span class="pri pri-p0">P0</span></td>
+      <td>register_child() 直接用 child->num_prefix 遍历数组，未检查 (N+M)×255 ≤ recvfrom 收到的字节数</td>
+    </tr>
+    <tr class="row-p1">
+      <td>io_update 同步阻塞</td>
+      <td><span class="pri pri-p1">P1</span></td>
+      <td>Ctrl worker 中 io_update() 连接子节点并等待响应，慢子节点卡住线程池</td>
+    </tr>
+    <tr class="row-p1">
+      <td>反注册 zombie 缺失</td>
+      <td><span class="pri pri-p1">P1</span></td>
+      <td>nref > 0 直接 EBUSY。建议: zombie 标记，route_deref 自动清理</td>
+    </tr>
+  </table>
+</section>
+
+<!-- ================================================================ -->
+<section id="identity" class="card">
+  <h2><span class="num">5</span> 身份追溯</h2>
+
+  <table>
+    <tr><th>通道</th><th>类型</th><th>身份</th><th>方案</th></tr>
+    <tr><td>IO</td><td>SOCK_STREAM</td><td>✅ SO_PEERCRED</td><td>accept 后 getsockopt</td></tr>
+    <tr><td>Ctrl</td><td>SOCK_DGRAM</td><td>❌ 无</td><td>SO_PASSCRED + recvmsg → SCM_CREDENTIALS</td></tr>
+  </table>
+
+  <h3>统一接口</h3>
+  <pre>// peer_cred.h
+int     peer_cred_get (int fd, struct ucred *cred);          // STREAM
+ssize_t peer_cred_recv(int fd, void *buf, size_t len, ...);   // DGRAM
+
+#define logFmtCred  "p%d,u%d,g%d"
+#define logArgCred(c) (c).pid, (c).uid, (c).gid</pre>
+
+  <div class="callout callout-info">
+    <strong>定位</strong>: 审计日志，不做强制访问控制。Unix socket 文件权限即为安全边界。
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<section id="append" class="card">
+  <h2><span class="num">6</span> Append 模式 <span class="pri pri-p1">P1</span></h2>
+
+  <p>新增 <code>_ctrl_register_child_append</code> (type=6)，包结构复用 <code>ctrl_package_register_child_t</code>。</p>
+
+  <table>
+    <tr><th>模式</th><th>注册名已存在</th><th>注册名不存在</th></tr>
+    <tr><td>普通 (type=0)</td><td>清理旧的，创建新的</td><td>创建新的</td></tr>
+    <tr><td>追加 (type=6)</td><td>追加 prefix / cache_now</td><td>返回 ENOENT</td></tr>
+  </table>
+
+  <pre># 启动时核心注册
+prop ctrl register_child db-server /db/* /config/*
+
+# 运行时热加载新模块
+prop ctrl register_child_append db-server /metrics/* /health/*</pre>
+
+  <p style="color:var(--muted)">不需要协议层分片；一次 append 装不下由调用方多次 append。</p>
+</section>
+
+<!-- ================================================================ -->
+<section id="issues" class="card">
+  <h2><span class="num">7</span> 问题汇总</h2>
+
+  <table>
+    <tr><th style="width:2em">#</th><th>问题</th><th>严重度</th><th>位置</th></tr>
+    <tr class="row-p0"><td>1</td><td>get 响应不对称 — handler 直接 send, worker 循环再 send</td><td><span class="pri pri-p0">P0</span></td><td>server/io.c</td></tr>
+    <tr class="row-p0"><td>2</td><td>io_package.value 命名误导 — 仅 header 不含 data[]</td><td><span class="pri pri-p0">P0</span></td><td>io_package.h</td></tr>
+    <tr class="row-p0"><td>3</td><td>ENOMEM 时不 send result — 客户端 io_end() 永久阻塞</td><td><span class="pri pri-p0">P0</span></td><td>server/io.c</td></tr>
+    <tr class="row-p0"><td>4</td><td>Ctrl 解包无边界校验 — num_prefix 可读到越界值</td><td><span class="pri pri-p0">P0</span></td><td>server/ctrl.c</td></tr>
+    <tr class="row-p1"><td>5</td><td>Ctrl 无 payload_length — 两端独立计算包长</td><td><span class="pri pri-p1">P1</span></td><td>ctrl_package.h</td></tr>
+    <tr class="row-p1"><td>6</td><td>io_update 同步阻塞 ctrl worker</td><td><span class="pri pri-p1">P1</span></td><td>server/ctrl.c</td></tr>
+    <tr class="row-p1"><td>7</td><td>反注册 nref>0 直接 EBUSY — 无 zombie 机制</td><td><span class="pri pri-p1">P1</span></td><td>route.c</td></tr>
+    <tr class="row-p1"><td>8</td><td>Ctrl 无身份追溯 — recvfrom 未知 pid/uid</td><td><span class="pri pri-p1">P1</span></td><td>server/ctrl.c</td></tr>
+    <tr class="row-p1"><td>9</td><td>无版本协商 — 决定 register 时携带</td><td><span class="pri pri-p1">P1</span></td><td>整体</td></tr>
+    <tr class="row-p2"><td>10</td><td>IO 头 269B 固定 — key[255] 浪费 (待定)</td><td><span class="pri pri-p2">P2</span></td><td>io_package.h</td></tr>
+    <tr class="row-p2"><td>11</td><td>us_read_auto 隐式依赖 value_t 布局</td><td><span class="pri pri-p2">P2</span></td><td>unix_stream.c</td></tr>
+    <tr class="row-p2"><td>12</td><td>无超时 — recv/send 阻塞, 慢节点永久卡住</td><td><span class="pri pri-p2">P2</span></td><td>全局</td></tr>
+    <tr class="row-p2"><td>13</td><td>无帧边界 — STREAM 裸 send/recv, TCP 下粘包</td><td><span class="pri pri-p2">P2</span></td><td>server/io.c</td></tr>
+    <tr class="row-p3"><td>14</td><td>Ctrl 无时间戳 — 与 io_package 不一致</td><td><span class="pri pri-p3">P3</span></td><td>ctrl_package.h</td></tr>
+  </table>
+</section>
+
+<!-- ================================================================ -->
+<section id="suggestions" class="card">
+  <h2><span class="num">8</span> 改进建议</h2>
+
+  <h3>统一 IO 响应 <span class="pri pri-p0">P0</span></h3>
+  <pre>struct io_response {
+    int32_t     result;        // 4B
+    timestamp_t duration;      // 8B  (非 get 时为 0)
+    uint32_t    value_length;  // 4B  (0 = 无 value)
+    uint8_t     value[];       // value_length 字节
+};</pre>
+  <p style="color:var(--muted)">handler 不再直接 send，所有输出由 worker 循环统一发送。</p>
+
+  <h3>ENOMEM 也要 send result <span class="pri pri-p0">P0</span></h3>
+  <pre>if (!value) {
+    logfE("no memory");
+    int err = ENOMEM;
+    send(connfd, &err, sizeof(err), MSG_NOSIGNAL);  // ← 新增
+    /* discard client value data */
+    return ENOMEM;
+}</pre>
+
+  <h3>字段重命名 <span class="pri pri-p0">P0</span></h3>
+  <table>
+    <tr><th>当前 (误导)</th><th>→ 建议</th></tr>
+    <tr><td><code>value_t value;</code></td><td><code>value_type_t value_type; uint32_t value_length;</code></td></tr>
+  </table>
+
+  <h3>Ctrl 加 payload_length <span class="pri pri-p1">P1</span></h3>
+  <pre>struct ctrl_package {
+    ctrl_type_t type;
+    uint16_t    payload_length;   // ← 显式声明变长部分大小
+    union { ... };
+};</pre>
+
+  <h3>目标协议 v2 (远期)</h3>
+  <pre>// IO 请求 (变长)
+struct io_request {
+    io_type_t   type;          // 1B
+    timestamp_t created;       // 8B
+    uint16_t    key_length;    // 2B
+    uint32_t    value_length;  // 4B
+    char        key[];         // key_length 字节
+    // 后跟 value_length 字节数据
+};</pre>
+</section>
+
+<!-- ================================================================ -->
+<section id="other" class="card">
+  <h2><span class="num">9</span> 其他架构议题</h2>
+
+  <table>
+    <tr><th>议题</th><th>状态</th></tr>
+    <tr><td>路由表</td><td>LIST O(n)。建议 Trie/Radix Tree 或排序+二分</td></tr>
+    <tr><td>named_mutex</td><td><span class="pri pri-p3">✅ 质量过关</span> — RB-tree + per-key mutex + nref</td></tr>
+    <tr><td>缓存失效</td><td>TTL-only。建议新增 <code>_ctrl_cache_invalidate</code>: 子节点 set 后通知父</td></tr>
+    <tr><td>错误码</td><td>混用 errno/EIO/ENOENT/-1。建议 <code>PROPD_ERR_*</code> 枚举</td></tr>
+    <tr><td>IO 变长 key</td><td>固定 key[255] 浪费带宽 (待进一步考虑)</td></tr>
+    <tr><td>大端兼容</td><td>当前 Unix domain 本机 OK。扩展 TCP 需 htonl/ntohl</td></tr>
+  </table>
+</section>
+
+<!-- ================================================================ -->
+<section id="done" class="card">
+  <h2><span class="num">10</span> 已完成</h2>
+  <ul class="done-list">
+    <li>目录重组 — include/ src/ vendor/</li>
+    <li>libprop / libpropd 分离</li>
+    <li>builtin/unix.c 复用 unix_stream.h</li>
+  </ul>
+</section>
+
+<!-- ================================================================ -->
+<section id="priority" class="card">
+  <h2><span class="num">11</span> 优先级总览</h2>
+
+  <table>
+    <tr><th>优先级</th><th>项目</th></tr>
+    <tr class="row-p0"><td><span class="pri pri-p0">P0</span></td><td>io_package.value → value_type/value_length</td></tr>
+    <tr class="row-p0"><td><span class="pri pri-p0">P0</span></td><td>ENOMEM 时 send result</td></tr>
+    <tr class="row-p0"><td><span class="pri pri-p0">P0</span></td><td>Ctrl 解包边界校验</td></tr>
+    <tr class="row-p1"><td><span class="pri pri-p1">P1</span></td><td>io_response 统一格式</td></tr>
+    <tr class="row-p1"><td><span class="pri pri-p1">P1</span></td><td>Ctrl payload_length</td></tr>
+    <tr class="row-p1"><td><span class="pri pri-p1">P1</span></td><td>register_child_append</td></tr>
+    <tr class="row-p1"><td><span class="pri pri-p1">P1</span></td><td>版本协商 (register 时)</td></tr>
+    <tr class="row-p1"><td><span class="pri pri-p1">P1</span></td><td>Ctrl SCM_CREDENTIALS + peer_cred 统一接口</td></tr>
+    <tr class="row-p1"><td><span class="pri pri-p1">P1</span></td><td>反注册 zombie 机制</td></tr>
+    <tr class="row-p1"><td><span class="pri pri-p1">P1</span></td><td>io_update 异步化</td></tr>
+    <tr class="row-p2"><td><span class="pri pri-p2">P2</span></td><td>IO 变长 key (待定)</td></tr>
+    <tr class="row-p2"><td><span class="pri pri-p2">P2</span></td><td>Socket 超时</td></tr>
+    <tr class="row-p2"><td><span class="pri pri-p2">P2</span></td><td>子节点健康检查 + 自动摘除</td></tr>
+    <tr class="row-p2"><td><span class="pri pri-p2">P2</span></td><td>显式帧边界 (防 TCP 粘包)</td></tr>
+    <tr class="row-p2"><td><span class="pri pri-p2">P2</span></td><td>大端兼容</td></tr>
+    <tr class="row-p2"><td><span class="pri pri-p2">P2</span></td><td>us_read_auto static_assert</td></tr>
+    <tr class="row-p3"><td><span class="pri pri-p3">P3</span></td><td>Ctrl 加时间戳</td></tr>
+    <tr class="row-p3"><td><span class="pri pri-p3">P3</span></td><td>缓存主动失效</td></tr>
+    <tr class="row-p3"><td><span class="pri pri-p3">P3</span></td><td>统一错误码</td></tr>
+    <tr class="row-p3"><td><span class="pri pri-p3">P3</span></td><td>路由表 Trie / Radix Tree</td></tr>
+    <tr><td><span class="pri pri-p4">P4</span></td><td>测试 (unit + integration)</td></tr>
+  </table>
+</section>
+
+<hr>
+<footer>propd · design plan · 2026-05-24</footer>
+
+</main>
+</body>
+</html>
