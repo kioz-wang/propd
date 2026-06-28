@@ -15,87 +15,73 @@
     --green:#16a34a; --green-bg:#f0fdf4; --green-border:#bbf7d0;
     --gray:#6b7280; --gray-bg:#f9fafb; --gray-border:#e5e7eb;
     --code-bg:#1e293b; --code-text:#e2e8f0;
-    --sidebar-w:240px;
+    --sidebar-w:230px;
     font-size:15px;
   }
   body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.65;display:flex}
   /* sidebar */
-  aside{position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;background:var(--card);border-right:1px solid var(--border);padding:2rem 1.5rem;overflow-y:auto;z-index:10}
-  aside h2{font-size:.75rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:1.25rem}
-  aside a{display:block;padding:.45rem .75rem;border-radius:6px;color:var(--muted);text-decoration:none;font-size:.88rem;margin-bottom:2px;transition:all .15s}
+  aside{position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;background:var(--card);border-right:1px solid var(--border);padding:1.8rem 1.4rem;overflow-y:auto;z-index:10}
+  aside h2{font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:1rem}
+  aside a{display:block;padding:.4rem .7rem;border-radius:6px;color:var(--muted);text-decoration:none;font-size:.85rem;margin-bottom:1px;transition:all .15s}
   aside a:hover{background:var(--accent-dim);color:var(--accent)}
   /* main */
   main{margin-left:var(--sidebar-w);flex:1;min-height:100vh;padding:3rem 4rem;max-width:calc(960px + var(--sidebar-w))}
-  header{margin-bottom:3rem}
-  header h1{font-size:2rem;font-weight:700;letter-spacing:-.02em;margin-bottom:.35rem}
-  header p{color:var(--muted);font-size:.95rem}
+  header{margin-bottom:2.5rem}
+  header h1{font-size:1.9rem;font-weight:700;letter-spacing:-.02em;margin-bottom:.25rem}
+  header p{color:var(--muted);font-size:.92rem}
   /* cards */
   .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:2rem;margin-bottom:2rem;box-shadow:0 1px 3px rgba(0,0,0,.04)}
-  .card h2{font-size:1.25rem;font-weight:650;margin-bottom:1.25rem;display:flex;align-items:center;gap:.6rem}
-  .card h2 .num{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:var(--accent-dim);color:var(--accent);font-size:.85rem;font-weight:700;flex-shrink:0}
-  .card h3{font-size:1rem;font-weight:600;margin:1.5rem 0 .6rem}
+  .card h2{font-size:1.2rem;font-weight:650;margin-bottom:1.2rem;display:flex;align-items:center;gap:.5rem}
+  .card h2 .num{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;background:var(--accent-dim);color:var(--accent);font-size:.82rem;font-weight:700;flex-shrink:0}
+  .card h3{font-size:1rem;font-weight:600;margin:1.4rem 0 .55rem}
   .card h3:first-of-type{margin-top:0}
-  .card p{margin-bottom:.85rem;color:var(--muted)}
+  .card p{margin-bottom:.8rem;color:var(--muted)}
   .card p strong{color:var(--text)}
   /* badges */
-  .pri{display:inline-flex;align-items:center;gap:4px;padding:1px 10px;border-radius:99px;font-size:.75rem;font-weight:650;letter-spacing:.03em;white-space:nowrap}
+  .pri{display:inline-flex;align-items:center;gap:3px;padding:1px 9px;border-radius:99px;font-size:.73rem;font-weight:650;letter-spacing:.03em;white-space:nowrap}
   .pri-p0{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
   .pri-p1{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}
   .pri-p2{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)}
   .pri-p3{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
   .pri-p4{background:var(--gray-bg);color:var(--gray);border:1px solid var(--gray-border)}
-  .pri::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%}
+  .pri::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%}
   .pri-p0::before{background:var(--red)}
   .pri-p1::before{background:var(--amber)}
   .pri-p2::before{background:var(--blue)}
   .pri-p3::before{background:var(--green)}
   .pri-p4::before{background:var(--gray)}
   /* tables */
-  table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
-  th{text-align:left;padding:.6rem .8rem;color:var(--muted);font-weight:600;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--border)}
-  td{padding:.65rem .8rem;border-bottom:1px solid var(--border);vertical-align:top}
+  table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.88rem}
+  th{text-align:left;padding:.55rem .75rem;color:var(--muted);font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--border)}
+  td{padding:.6rem .75rem;border-bottom:1px solid var(--border);vertical-align:top}
   tr:last-child td{border-bottom:none}
   .row-p0 td:first-child{border-left:3px solid var(--red)}
   .row-p1 td:first-child{border-left:3px solid var(--amber)}
   .row-p2 td:first-child{border-left:3px solid var(--blue)}
   .row-p3 td:first-child{border-left:3px solid var(--green)}
   /* code / pre */
-  pre{background:var(--code-bg);color:var(--code-text);padding:1.2rem 1.4rem;border-radius:10px;overflow-x:auto;font-family:'JetBrains Mono','Fira Code','Cascadia Code',monospace;font-size:.82rem;line-height:1.55;margin:1rem 0}
-  code{font-family:'JetBrains Mono','Fira Code','Cascadia Code',monospace;font-size:.88em}
-  :not(pre)>code{background:var(--gray-bg);border:1px solid var(--gray-border);padding:1px 6px;border-radius:4px;color:var(--accent)}
-  /* diagram */
-  .diagram{display:grid;grid-template-columns:1fr 40px 1fr;gap:0;margin:1.2rem 0;font-size:.84rem;align-items:start}
-  .diagram .col{padding:.8rem 1rem;border:1px solid var(--border);border-radius:8px;background:var(--gray-bg)}
-  .diagram .col h4{font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:.5rem}
-  .diagram .arrow{display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:var(--muted)}
-  .diagram .row{display:flex;align-items:center;gap:.3rem;padding:2px 0}
-  .diagram .row .who{color:var(--muted);font-size:.75rem;min-width:3em}
-  .diagram .sep{margin-top:.5rem;padding-top:.5rem;border-top:1px dashed var(--border)}
-  /* flow */
-  .flow{display:flex;flex-direction:column;gap:6px;margin:1rem 0;font-family:'JetBrains Mono','Fira Code',monospace;font-size:.82rem}
-  .flow .step{display:flex;gap:.8rem;align-items:baseline}
-  .flow .step .idx{color:var(--muted);font-size:.75rem;min-width:1.5em;text-align:right}
-  .flow .step .act{color:var(--blue)}
-  .flow .step .srv{color:var(--green)}
-  .flow .step .sto{color:var(--amber)}
-  .flow .step .info{color:var(--muted)}
+  pre{background:var(--code-bg);color:var(--code-text);padding:1.1rem 1.3rem;border-radius:10px;overflow-x:auto;font-family:'JetBrains Mono','Fira Code','Cascadia Code',monospace;font-size:.8rem;line-height:1.5;margin:1rem 0}
+  code{font-family:'JetBrains Mono','Fira Code','Cascadia Code',monospace;font-size:.86em}
+  :not(pre)>code{background:var(--gray-bg);border:1px solid var(--gray-border);padding:1px 5px;border-radius:4px;color:var(--accent)}
+  /* mermaid */
+  .mermaid{background:#fafbfc;border:1px solid var(--border);border-radius:10px;padding:1.2rem;margin:1rem 0;overflow-x:auto}
   /* callout */
-  .callout{padding:.8rem 1rem;border-radius:8px;margin:1rem 0;font-size:.88rem}
+  .callout{padding:.75rem 1rem;border-radius:8px;margin:1rem 0;font-size:.86rem}
   .callout-warn{background:var(--amber-bg);border:1px solid var(--amber-border);color:#92400e}
   .callout-info{background:var(--blue-bg);border:1px solid var(--blue-border);color:#1e40af}
   .callout-good{background:var(--green-bg);border:1px solid var(--green-border);color:#166534}
   /* stats */
-  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin:1rem 0}
-  .stat{background:var(--gray-bg);border:1px solid var(--border);border-radius:10px;padding:1.2rem;text-align:center}
-  .stat .val{font-size:1.8rem;font-weight:700;color:var(--accent)}
-  .stat .lbl{font-size:.78rem;color:var(--muted);margin-top:.3rem}
-  /* timeline */
-  .done-list{display:flex;flex-wrap:wrap;gap:.5rem;list-style:none}
-  .done-list li{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);padding:.3rem .8rem;border-radius:99px;font-size:.83rem}
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.9rem;margin:1rem 0}
+  .stat{background:var(--gray-bg);border:1px solid var(--border);border-radius:10px;padding:1.1rem;text-align:center}
+  .stat .val{font-size:1.7rem;font-weight:700;color:var(--accent)}
+  .stat .lbl{font-size:.75rem;color:var(--muted);margin-top:.25rem}
+  /* done */
+  .done-list{display:flex;flex-wrap:wrap;gap:.4rem;list-style:none}
+  .done-list li{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);padding:.25rem .7rem;border-radius:99px;font-size:.8rem}
   .done-list li::before{content:'✓ '}
-  hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
-  footer{color:var(--muted);font-size:.8rem}
-  @media(max-width:900px){aside{display:none}main{margin-left:0;padding:2rem 1.5rem}}
+  hr{border:none;border-top:1px solid var(--border);margin:1.8rem 0}
+  footer{color:var(--muted);font-size:.78rem}
+  @media(max-width:860px){aside{display:none}main{margin-left:0;padding:2rem 1.2rem}}
 </style>
 </head>
 <body>
@@ -105,6 +91,7 @@
   <a href="#overview">协议总览</a>
   <a href="#io">IO PDU &amp; 时序</a>
   <a href="#ctrl">Ctrl PDU</a>
+  <a href="#redesign">协议重设计</a>
   <a href="#reg">注册/反注册</a>
   <a href="#identity">身份追溯</a>
   <a href="#append">Append 模式</a>
@@ -113,13 +100,14 @@
   <a href="#other">其他议题</a>
   <a href="#done">已完成</a>
   <a href="#priority">优先级</a>
+  <a href="#layers">IO 分层 &amp; TCP</a>
 </aside>
 
 <main>
 
 <header>
   <h1>propd · Design Plan</h1>
-  <p>Protocol review, issue tracking &amp; improvement roadmap — 2026-05-24</p>
+  <p>Protocol review, issue tracking &amp; improvement roadmap — 2026-06-29</p>
 </header>
 
 <!-- ================================================================ -->
@@ -135,9 +123,9 @@
 
   <h3>IO 协议 <code>SOCK_STREAM</code></h3>
   <table>
-    <tr><th>操作</th><th>请求大小</th><th>响应段数</th><th>响应内容</th></tr>
+    <tr><th>操作</th><th>请求</th><th>响应</th><th>内容</th></tr>
     <tr><td><code>_io_get</code></td><td>269 B</td><td><span class="pri pri-p0">3 段</span></td><td>duration → value → result</td></tr>
-    <tr><td><code>_io_set</code></td><td>269 + value B</td><td>1 段</td><td>result</td></tr>
+    <tr><td><code>_io_set</code></td><td>269 + val</td><td>1 段</td><td>result</td></tr>
     <tr><td><code>_io_del</code></td><td>269 B</td><td>1 段</td><td>result</td></tr>
     <tr><td><code>_io_info</code></td><td>269 B</td><td>多段</td><td>range → choices → help → chain → result</td></tr>
   </table>
@@ -171,48 +159,82 @@
   + 可选: value.length 字节数据 (仅 _io_set)</pre>
 
   <h3>get 时序</h3>
-  <div class="diagram">
-    <div class="col">
-      <h4>Client</h4>
-      <div class="row"><span class="who">T1</span> us_open_at() → connect</div>
-      <div class="row"><span class="who">T2</span> io_begin(_io_get)</div>
-      <div class="row sep"><span class="who">T3</span> us_read(duration, 8B)</div>
-      <div class="row"><span class="who">T4</span> us_read_auto(value)</div>
-      <div class="row"><span class="who">T5</span> us_read(result, 4B)</div>
-      <div class="row sep"><span class="who">T6</span> us_close()</div>
-    </div>
-    <div class="arrow">⇄</div>
-    <div class="col">
-      <h4>Server</h4>
-      <div class="row"><span class="who">—</span> accept() → thread_pool</div>
-      <div class="row"><span class="who">—</span> recv(pkg_head, 269B)</div>
-      <div class="row sep"><span class="who">—</span> cache_get → ENOENT</div>
-      <div class="row"><span class="who">—</span> route_match → &amp;storage</div>
-      <div class="row"><span class="who">—</span> named_mutex_lock</div>
-      <div class="row"><span class="who">—</span> prop_storage_get()</div>
-      <div class="row sep"><span class="who">—</span> send(duration) ← handler 内!</div>
-      <div class="row"><span class="who">—</span> send(value)</div>
-      <div class="row sep"><span class="who">—</span> send(result) ← worker 循环</div>
-      <div class="row"><span class="who">—</span> recv(下一个请求)</div>
-    </div>
+  <div class="mermaid">
+sequenceDiagram
+    participant C as Client
+    participant S as Server
+
+    C->>S: us_open_at() → connect
+    activate S
+    S-->>C: accept() → thread_pool
+
+    C->>S: io_begin(_io_get)  269B
+    Note right of S: cache_get → ENOENT<br/>route_match → storage<br/>named_mutex_lock(key)<br/>prop_storage_get()
+
+    S-->>C: send(duration)  8B
+    Note over C,S: ⚠ handler 内直接 send (①②段)
+    S-->>C: send(value)  5+len
+
+    S-->>C: send(result)  4B
+    Note over C,S: worker 循环 send (③段)
+    deactivate S
+
+    Note over C: us_close()
   </div>
   <div class="callout callout-warn">
-    <strong>⚠ 不对称</strong>: handler 直接 send() duration+value (①②段), worker 循环 send result (③段)。发送逻辑分散在两个函数里。
+    <strong>⚠ 不对称</strong>: get 的 handler 内部直接 <code>send()</code> duration+value，绕过了 worker 循环的 result 发送。发送逻辑分散在 <code>get()</code> 和 <code>worker()</code> 两个函数中。
   </div>
 
   <h3>set 时序</h3>
-  <div class="flow">
-    <div class="step"><span class="idx">C→</span><span class="act">us_write(pkg_head, 269B)</span></div>
-    <div class="step"><span class="idx">C→</span><span class="act">us_write(value_data, len)</span></div>
-    <div class="step"><span class="idx">S:</span><span class="info">recv → malloc(value) → cred_check → io_set()</span></div>
-    <div class="step"><span class="idx">C←</span><span class="srv">us_read(result, 4B)</span></div>
+  <div class="mermaid">
+sequenceDiagram
+    participant C as Client
+    participant S as Server
+
+    C->>S: us_open_at() → connect
+    activate S
+    S-->>C: accept() → thread_pool
+
+    C->>S: io_begin(_io_set)  269B
+    C->>S: us_write(value_data)  len B
+    Note right of S: malloc(value_t+data)<br/>cred_check() → io_set()<br/>storage->set()
+
+    S-->>C: send(result)  4B
+    deactivate S
+
+    Note over C: us_close()
   </div>
   <div class="callout callout-warn">
-    <strong>⚠ ENOMEM bug</strong>: malloc 失败后 server 直接 return，<em>不 send result</em>。客户端在 io_end() 永久阻塞。
+    <strong>⚠ ENOMEM bug</strong>: <code>malloc()</code> 失败后 server 直接 return ENOMEM，<em>不 send result</em>。客户端在 <code>io_end()</code> = <code>us_read(result)</code> 上永久阻塞。
   </div>
 
-  <h3>del / info 时序</h3>
-  <p style="color:var(--muted)">del: 请求 → io_del() → result。info: 请求 → range → choices[N] → help → chain[N] → result。</p>
+  <h3>del 时序</h3>
+  <div class="mermaid">
+sequenceDiagram
+    participant C as Client
+    participant S as Server
+
+    C->>S: io_begin(_io_del)  269B
+    Note right of S: cred_check() → io_del()<br/>storage->del()
+    S-->>C: send(result)  4B
+  </div>
+
+  <h3>info 时序</h3>
+  <div class="mermaid">
+sequenceDiagram
+    participant C as Client
+    participant S as Server
+
+    C->>S: io_begin(_io_info)  269B
+    Note right of S: route_match → lock
+
+    S-->>C: send(range)
+    S-->>C: send(choices) × N
+    S-->>C: send(help_msg)
+    S-->>C: send(chain_len)
+    S-->>C: send(chain) × N
+    S-->>C: send(result)  4B
+  </div>
 </section>
 
 <!-- ================================================================ -->
@@ -220,13 +242,18 @@
   <h2><span class="num">3</span> Ctrl PDU</h2>
 
   <h3>C/S 交互</h3>
-  <div class="flow">
-    <div class="step"><span class="idx">C:</span><span class="info">socket() → bind(abstract) → malloc(包)</span></div>
-    <div class="step"><span class="idx">C:</span><span class="info">填充字段 → sendto()</span></div>
-    <div class="step"><span class="idx">S:</span><span class="info">recvfrom(pkg, max) → thread_pool_submit(worker)</span></div>
-    <div class="step"><span class="idx">S:</span><span class="info">switch(type): register / unregister / dump</span></div>
-    <div class="step"><span class="idx">S:</span><span class="info">sendto(result, 4B)</span></div>
-    <div class="step"><span class="idx">C:</span><span class="info">recvfrom(result) → close()</span></div>
+  <div class="mermaid">
+sequenceDiagram
+    participant C as Client
+    participant S as Server
+
+    Note over C: socket() → bind(abstract)<br/>malloc(包) → 填充字段
+
+    C->>S: sendto(pkg, len)
+    Note right of S: recvfrom(pkg, max)<br/>thread_pool_submit(worker)<br/>switch(type): register / unregister / dump
+
+    S-->>C: sendto(result)  4B
+    Note over C: recvfrom(result) → close()
   </div>
 
   <h3>有效载荷效率</h3>
@@ -238,8 +265,99 @@
 </section>
 
 <!-- ================================================================ -->
+<section id="redesign" class="card">
+  <h2><span class="num">4</span> 协议重设计 <span class="pri pri-p1">P1</span></h2>
+
+  <h3>4.1 Ctrl/IO 分离 — 设计上是正确的</h3>
+  <div class="callout callout-good">
+    <strong>结论</strong>: Ctrl=DGRAM + IO=STREAM 在 Unix domain 本机场景下是正确的设计选择。不需要改。DGRAM 无连接、天然有消息边界，适合一问一答的 management RPC。STREAM 适合多路复用数据流。
+  </div>
+
+  <h3>4.2 当前协议的核心问题</h3>
+  <table>
+    <tr><th>#</th><th>问题</th><th>表现</th></tr>
+    <tr><td>1</td><td>手写序列化散落 4 处</td><td>ctrl.c / unix.c / server/io.c / unix_stream.c 各自 pack/unpack</td></tr>
+    <tr><td>2</td><td>无帧边界</td><td>send/recv 裸用，server 必须精确知道"接下来多少字节"</td></tr>
+    <tr><td>3</td><td>union dispatch 无法扩展</td><td>加新消息类型要改 union 定义，影响所有已有分支</td></tr>
+  </table>
+
+  <h3>4.3 Codec 模块 — 零分配访问器</h3>
+  <p>Codec 不是序列化引擎，而是<b>类型安全的指针访问器集合</b>。不引入额外 <code>malloc</code>。</p>
+  <pre>// codec.h — 纯内联，零开销
+struct ctrl_package {
+    ctrl_type_t type;
+    uint16_t    payload_len;
+    uint8_t     name_len;
+    char        name[];           // flexible
+};
+
+static inline struct register_child_payload*
+ctrl_as_child(const struct ctrl_package *p) {
+    assert(p->type == _ctrl_register_child);
+    return (struct register_child_payload *)(p->name + p->name_len);
+}
+
+static inline const char*
+ctrl_as_name(const struct ctrl_package *p) {
+    return p->name;
+}</pre>
+
+  <div class="callout callout-info">
+    <strong>核心价值</strong>: 把散落在 4 个文件里靠约定和指针算术维持的 pack/unpack 收敛到一个模块。内存分配次数不变（仍然只有一次 <code>malloc</code> → <code>recvfrom</code>）。
+  </div>
+
+  <h3>4.4 变长 PDU — 方案 A (最小改动)</h3>
+  <p>定长 <code>key[255]</code>/<code>name[255]</code>/<code>items[N][255]</code> 是 96% 浪费的根源。加 <code>_len</code> 前缀即可解决。</p>
+
+  <h4>新 IO 请求头</h4>
+  <pre>struct io_package {
+    io_type_t   type;          // 1B
+    timestamp_t created;       // 8B
+    uint8_t     key_len;       // 1B  ← 变长
+    uint32_t    value_len;     // 4B  (仅 set 时 >0)
+    char        key[];         // key_len 字节
+    // 后跟 value_len 字节数据
+};
+// get("/db/host"): 14+7 = 21B  (vs 269B, 效率 5.6% → 71%)</pre>
+
+  <h4>新 Ctrl 请求头</h4>
+  <pre>struct ctrl_package {
+    ctrl_type_t type;          // 1B
+    uint16_t    payload_len;   // 2B  显式长度
+    uint8_t     name_len;      // 1B
+    char        name[];        // 变长
+};
+
+// register_child payload:
+//   uint8_t num_cache_now; uint8_t num_prefix;
+//   for each: uint8_t len + str
+//
+// register_child("db", 1 cache, 2 prefix):
+//   1+2+1+2 + 1+1 + 1+7 + 1+5 + 1+6 = 29B  (vs 1029B, 4% → 68%)
+// unregister_child("db"):
+//   1+2+1+2 = 6B  (vs 256B)</pre>
+
+  <h3>4.5 DGRAM 变长接收方案 <code>MSG_TRUNC</code></h3>
+  <pre>// 栈缓冲，一次 syscall
+char buf[65536];
+ssize_t n = recvfrom(fd, buf, sizeof(buf), MSG_TRUNC, &cliaddr, &addrlen);
+assert(n &lt;= sizeof(buf) &amp;&amp; "too big, use fallback");
+
+// buf[0..n-1] = 完整数据报, n = 真实长度
+// 典型 Ctrl 包 < 200B, 64KB 绰绰有余</pre>
+
+  <h3>4.6 C vs C++</h3>
+  <table>
+    <tr><th>层</th><th>语言</th><th>理由</th></tr>
+    <tr><td>协议头 (include/propd/)</td><td>C</td><td>跨语言兼容, extern "C"</td></tr>
+    <tr><td>client (libprop)</td><td>C</td><td>轻量、无运行时依赖</td></tr>
+    <tr><td>server (libpropd)</td><td>C++ 可考虑</td><td>route/cache/io_context 等带生命周期的数据结构收益大: RAII, shared_ptr, variant</td></tr>
+  </table>
+</section>
+
+<!-- ================================================================ -->
 <section id="reg" class="card">
-  <h2><span class="num">4</span> 注册 / 反注册机制</h2>
+  <h2><span class="num">5</span> 注册 / 反注册机制</h2>
 
   <table>
     <tr><th>问题</th><th>严重度</th><th>描述</th></tr>
@@ -268,7 +386,7 @@
 
 <!-- ================================================================ -->
 <section id="identity" class="card">
-  <h2><span class="num">5</span> 身份追溯</h2>
+  <h2><span class="num">6</span> 身份追溯</h2>
 
   <table>
     <tr><th>通道</th><th>类型</th><th>身份</th><th>方案</th></tr>
@@ -291,7 +409,7 @@ ssize_t peer_cred_recv(int fd, void *buf, size_t len, ...);   // DGRAM
 
 <!-- ================================================================ -->
 <section id="append" class="card">
-  <h2><span class="num">6</span> Append 模式 <span class="pri pri-p1">P1</span></h2>
+  <h2><span class="num">7</span> Append 模式 <span class="pri pri-p1">P1</span></h2>
 
   <p>新增 <code>_ctrl_register_child_append</code> (type=6)，包结构复用 <code>ctrl_package_register_child_t</code>。</p>
 
@@ -312,7 +430,7 @@ prop ctrl register_child_append db-server /metrics/* /health/*</pre>
 
 <!-- ================================================================ -->
 <section id="issues" class="card">
-  <h2><span class="num">7</span> 问题汇总</h2>
+  <h2><span class="num">8</span> 问题汇总</h2>
 
   <table>
     <tr><th style="width:2em">#</th><th>问题</th><th>严重度</th><th>位置</th></tr>
@@ -335,7 +453,7 @@ prop ctrl register_child_append db-server /metrics/* /health/*</pre>
 
 <!-- ================================================================ -->
 <section id="suggestions" class="card">
-  <h2><span class="num">8</span> 改进建议</h2>
+  <h2><span class="num">9</span> 改进建议</h2>
 
   <h3>统一 IO 响应 <span class="pri pri-p0">P0</span></h3>
   <pre>struct io_response {
@@ -350,7 +468,7 @@ prop ctrl register_child_append db-server /metrics/* /health/*</pre>
   <pre>if (!value) {
     logfE("no memory");
     int err = ENOMEM;
-    send(connfd, &err, sizeof(err), MSG_NOSIGNAL);  // ← 新增
+    send(connfd, &amp;err, sizeof(err), MSG_NOSIGNAL);  // ← 新增
     /* discard client value data */
     return ENOMEM;
 }</pre>
@@ -382,7 +500,7 @@ struct io_request {
 
 <!-- ================================================================ -->
 <section id="other" class="card">
-  <h2><span class="num">9</span> 其他架构议题</h2>
+  <h2><span class="num">10</span> 其他架构议题</h2>
 
   <table>
     <tr><th>议题</th><th>状态</th></tr>
@@ -397,7 +515,7 @@ struct io_request {
 
 <!-- ================================================================ -->
 <section id="done" class="card">
-  <h2><span class="num">10</span> 已完成</h2>
+  <h2><span class="num">11</span> 已完成</h2>
   <ul class="done-list">
     <li>目录重组 — include/ src/ vendor/</li>
     <li>libprop / libpropd 分离</li>
@@ -407,7 +525,7 @@ struct io_request {
 
 <!-- ================================================================ -->
 <section id="priority" class="card">
-  <h2><span class="num">11</span> 优先级总览</h2>
+  <h2><span class="num">12</span> 优先级总览</h2>
 
   <table>
     <tr><th>优先级</th><th>项目</th></tr>
@@ -435,9 +553,51 @@ struct io_request {
   </table>
 </section>
 
+<!-- ================================================================ -->
+<section id="layers" class="card">
+  <h2><span class="num">13</span> IO 分层 &amp; TCP 演进</h2>
+
+  <h3>13.1 当前分层分析</h3>
+  <p>server 侧一次 <code>get</code> 请求经过 4 个文件:</p>
+  <table>
+    <tr><th>文件</th><th>职责</th><th>评价</th></tr>
+    <tr><td><code>io.c</code></td><td>网络 I/O + 协议解析 (accept → recv → dispatch → send)</td><td>保留, 但 handler 内 send() 需修复 → worker 统一 send</td></tr>
+    <tr><td><code>io_context.c</code></td><td>业务逻辑编排 (cache → route → lock → storage)</td><td>✅ 边界正确, 传输无关</td></tr>
+    <tr class="warn"><td><code>storage.c</code></td><td>仅日志装饰器, 99% 是 <code>logfI</code> + 转发函数指针</td><td>太薄 — 建议移到 <code>storage.h</code> 作为 <code>static inline</code></td></tr>
+    <tr><td><code>unix_stream.c</code></td><td>通用 I/O 抽象 (us_read/us_write, 含帧边界处理)</td><td>✅ 正确, client 已迁移, server 待迁移</td></tr>
+  </table>
+
+  <div class="callout callout-info">
+    <strong>计划</strong>: server <code>io.c</code> 也改用 <code>us_t</code> (原定, 未完成)。完成后 <code>worker()</code> 的 <code>recv/send</code> 替换为 <code>us_read/us_write</code>，顺带解决两个 P0: 响应不对称 (io_response 统一) 和 ENOMEM 不发 result。
+  </div>
+
+  <h3>13.2 TCP 就绪度</h3>
+  <p><code>builtin/tcp.c</code> 已有 client 侧骨架。加 TCP server 的关键分析:</p>
+  <table>
+    <tr><th>模块</th><th>状态</th><th>加 TCP 需要的改动</th></tr>
+    <tr class="good"><td>io_context / route / cache</td><td>✅ 完全传输无关</td><td>零改动</td></tr>
+    <tr class="good"><td>storage_t 接口</td><td>✅ client 侧已有 tcp stub</td><td>实现 get/set/del (复用 unix.c 模式, 连 TCP 而非 UDS)</td></tr>
+    <tr class="warn"><td>unix_stream (帧边界)</td><td>⚠ client 已用, server 未迁移</td><td>server io.c → us_t 迁移后, TCP 下帧边界天然成立</td></tr>
+    <tr class="bad"><td>server/io.c (listener)</td><td>❌ AF_LOCAL 硬编码</td><td>抽象 listener: Unix/TCP 各实现 open/accept/close</td></tr>
+    <tr class="bad"><td>server/io.c (auth)</td><td>❌ SO_PEERCRED Unix 专属</td><td>抽象 transport_auth: Unix→SO_PEERCRED, TCP→token/TLS</td></tr>
+  </table>
+
+  <h3>13.3 演进路径</h3>
+  <table>
+    <tr><th>Step</th><th>内容</th></tr>
+    <tr><td>1</td><td>server io.c 迁移到 <code>us_t</code> (修复 get 不对称 + ENOMEM bug)</td></tr>
+    <tr><td>2</td><td>storage.c → storage.h (static inline), 减一层</td></tr>
+    <tr><td>3</td><td>抽象 listener (Unix/TCP), 抽象 auth (SO_PEERCRED/token)</td></tr>
+    <tr><td>4</td><td>实现 builtin/tcp.c client 端, tcp_stream server 端</td></tr>
+  </table>
+</section>
+
 <hr>
-<footer>propd · design plan · 2026-05-24</footer>
+<footer>propd · design plan · 2026-06-29</footer>
 
 </main>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true,theme:'neutral',sequence:{showSequenceNumbers:false}});</script>
 </body>
 </html>
