@@ -1,5 +1,5 @@
 /**
- * @file prop.h
+ * @file control.h
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
@@ -28,8 +28,8 @@
  *  SOFTWARE.
  */
 
-#ifndef __PROPD_CTRL_CLIENT_H
-#define __PROPD_CTRL_CLIENT_H
+#ifndef __PROP_CONTROL_H
+#define __PROP_CONTROL_H
 
 #include <stdint.h>
 
@@ -84,4 +84,4 @@ int prop_dump_db_route(const char *server, void **db);
  */
 int prop_dump_db_cache(const char *server, void **db);
 
-#endif /* __PROPD_CTRL_CLIENT_H */
+#endif /* __PROP_CONTROL_H */

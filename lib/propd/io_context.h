@@ -59,7 +59,7 @@ int io_info(const io_ctx_t *io, const char *key, range_t *range, char **help_mes
  * @param storage
  * @return int errno
  */
-int io_update(const io_ctx_t *io, const char *key, const storage_t *storage);
+int io_update(const io_ctx_t *io, const char *key, const prop_io_t *storage);
 /**
  * @brief Set key on server end
  *

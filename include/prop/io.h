@@ -1,9 +1,9 @@
 /**
- * @file storage.h
+ * @file io.h
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
- * @date 2025-12-15
+ * @date 2026-08-07
  *
  * @copyright MIT License
  *
@@ -28,10 +28,10 @@
  *  SOFTWARE.
  */
 
-#ifndef __PROPD_STORAGE_H
-#define __PROPD_STORAGE_H
+#ifndef __PROP_IO_H
+#define __PROP_IO_H
 
-#include "shared/timestamp.h"
+#include "timestamp.h"
 #include "value.h"
 #include <sys/queue.h>
 
@@ -44,66 +44,93 @@
  *
  * The constructor is used to populate this context. It returns 0 on success, errno otherwise.
  */
-struct storage {
+struct prop_io {
     const char *name; /* duplicated in constructor, release in destructor */
     void       *priv; /* allocated in constructor, release in destructor */
     int (*get)(void *priv, const char *, const value_t **, timestamp_t *);
     int (*set)(void *priv, const char *, const value_t *);
     int (*del)(void *priv, const char *);
+    int (*info)(void *priv, const char *, const char **);
     void (*destructor)(void *priv);
 };
-typedef struct storage storage_t;
+typedef struct prop_io prop_io_t;
 
 /**
  * @brief
  *
- * @param storage
+ * @param io
  * @param key
  * @param value
  * @param duration maybe null
  * @return int errno (EOPNOTSUPP ...)
  */
-int prop_storage_get(const storage_t *storage, const char *key, const value_t **value, timestamp_t *duration);
-int prop_storage_info(const storage_t *storage, const char *key, range_t *range, char **help_message, char ***chain);
+int prop_get(const prop_io_t *io, const char *key, const value_t **value, timestamp_t *duration);
 /**
  * @brief
  *
- * @param storage
+ * @param io
  * @param key
  * @param value
  * @return int errno (EOPNOTSUPP ...)
  */
-int prop_storage_set(const storage_t *storage, const char *key, const value_t *value);
+int prop_set(const prop_io_t *io, const char *key, const value_t *value);
 /**
  * @brief
  *
- * @param storage
+ * @param io
  * @param key
  * @return int errno (EOPNOTSUPP ...)
  */
-int prop_storage_del(const storage_t *storage, const char *key);
+int prop_del(const prop_io_t *io, const char *key);
 /**
  * @brief
  *
- * @param storage
+ * @param io
+ * @param key
+ * @param info
+ * @return int
  */
-void prop_storage_destructor(const storage_t *storage);
+int prop_info(const prop_io_t *io, const char *key, const char **info);
+/**
+ * @brief
+ *
+ * @param io
+ */
+void prop_io_destructor(const prop_io_t *io);
 
 /**
- * storage 的命令行解析配置，通过 propd_config_apply_parser 注册到 propd_config 中后，将自动生成 help message
+ * prop_io 的命令行解析配置，通过 propd_config_apply_parser 注册到 propd_config 中后，将自动生成 help message
  * 并参数解析。
  *
  * parse 是需要实现的 constructor 包装。第二个参数是实例名，第三个参数是通过 arrayparse_cstring 解析得到的 cstring's
  * array，对应 argName 中的每个参数。It returns 0 on success, errno otherwise.
  */
-struct storage_parseConfig {
-    const char *name;    /* 类型名（storage 中的是实例名） */
+struct prop_io_parseConfig {
+    const char *name;    /* 类型名（prop_io 中的是实例名） */
     const char *argName; /* `,`隔开并结尾的参数字符串。会后接`<NAME>,<PREFIXES>`，输出到 help message 中 */
     const char *note;    /* 对参数的详细说明，会输出到 help message 中 */
     int         argNum;  /* 参数数量 */
-    int (*parse)(storage_t *, const char *, const char **);
-    LIST_ENTRY(storage_parseConfig) entry;
+    int (*parse)(prop_io_t *, const char *, const char **);
+    LIST_ENTRY(prop_io_parseConfig) entry;
 };
-typedef struct storage_parseConfig storage_parseConfig_t;
+typedef struct prop_io_parseConfig prop_io_parseConfig_t;
 
-#endif /* __PROPD_STORAGE_H */
+/**
+ * @brief Parse and allocate a value from a cstring
+ *
+ * @param str
+ * @return value_t* On error, return NULL and set errno (ENOMEM EINVAL)
+ */
+value_t *prop_value_parse(const char *str);
+/**
+ * @brief Format a value (Only for logging, due to potential truncation)
+ *
+ * @param buffer
+ * @param length
+ * @param value
+ * @param notype
+ * @return const char* Always return a pointer to buffer
+ */
+const char *prop_value_fmt(char *buffer, size_t length, const value_t *value, bool notype);
+
+#endif /* __PROP_IO_H */

@@ -1,9 +1,9 @@
 /**
- * @file tcp.c
+ * @file file.h
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
- * @date 2025-12-15
+ * @date 2026-08-07
  *
  * @copyright MIT License
  *
@@ -28,43 +28,13 @@
  *  SOFTWARE.
  */
 
-#include "builtin.h"
-#include "global.h"
-#include <errno.h>
+#ifndef __PROP_IMPL_FILE_H
+#define __PROP_IMPL_FILE_H
 
-#define logFmtHead "[storage::(tcp)] "
+#include "../io.h"
 
-struct priv {
-    /* TODO */;
-};
-typedef struct priv priv_t;
+int prop_file_impl(prop_io_t *io, const char *name, const char *dir);
 
-int prop_tcp_storage(storage_t *ctx, const char *name, const char *ip, unsigned short port) {
-    if (!(ctx->name = strdup(name))) {
-        logfE(logFmtHead "fail to allocate name" logFmtErrno, logArgErrno);
-        return errno;
-    }
+extern prop_io_parseConfig_t prop_file_parseConfig;
 
-    priv_t *priv = (priv_t *)malloc(sizeof(priv_t));
-    if (!priv) {
-        logfE(logFmtHead "fail to allocate priv" logFmtErrno, logArgErrno);
-        return errno;
-    }
-
-    ctx->priv       = priv;
-    ctx->destructor = free;
-    return EOPNOTSUPP;
-}
-
-static int parse(storage_t *ctx, const char *name, const char **args) {
-    unsigned short port = strtoul(args[1], NULL, 0);
-    return prop_tcp_storage(ctx, name, args[0], port);
-}
-
-storage_parseConfig_t prop_tcp_parseConfig = {
-    .name    = "tcp",
-    .argName = "<IP>,<PORT>,",
-    .note    = "注册类型为tcp的本地IO。IP，PORT是tcp IO需要连接的目标",
-    .argNum  = 2,
-    .parse   = parse,
-};
+#endif /* __PROP_IMPL_FILE_H */

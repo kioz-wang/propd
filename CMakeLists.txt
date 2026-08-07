@@ -42,5 +42,5 @@ add_link_options(
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-add_subdirectory(src)
+add_subdirectory(lib)
 add_subdirectory(app)

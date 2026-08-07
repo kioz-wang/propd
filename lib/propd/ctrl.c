@@ -71,7 +71,7 @@ typedef struct worker_arg worker_arg_t;
  */
 static int register_child(const io_ctx_t *io_ctx, const ctrl_package_register_child_t *child) {
     int       ret     = 0;
-    storage_t storage = {0};
+    prop_io_t storage = {0};
 
     if (!child->num_cache_now && !child->num_prefix) {
         logfE(logFmtHead "deny to register empty child %s", child->name);

@@ -28,13 +28,13 @@
  *  SOFTWARE.
  */
 
-#include "value.h"
+#include <prop/value.h>
 #include "misc.h"
 #include <errno.h>
 #include <limits.h>
 #include <stdio.h>
 
-value_t *pd_value_parse(const char *str) {
+value_t *prop_value_parse(const char *str) {
     const char *value = str;
     const char *colon = strchr(str, ':');
     if (colon) {
@@ -106,7 +106,7 @@ exit_inval:
     return NULL;
 }
 
-const char *pd_value_fmt(char *buffer, size_t length, const value_t *value, bool notype) {
+const char *prop_value_fmt(char *buffer, size_t length, const value_t *value, bool notype) {
     switch (value->type) {
     case _value_i32:
         snprintf(buffer, length, "%s%d", notype ? "" : "i32:", value_to_i32(value));

@@ -13,9 +13,9 @@
 #ifndef __PROPD_IO_PACKAGE_H
 #define __PROPD_IO_PACKAGE_H
 
-#include "shared/timestamp.h"
-#include "value.h"
 #include <linux/limits.h>
+#include <prop/timestamp.h>
+#include <prop/value.h>
 #include <stdint.h>
 
 enum io_type {

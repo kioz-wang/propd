@@ -73,7 +73,7 @@ static int command_get(int argc, char *argv[]) {
     }
 
     int       ret     = 0;
-    storage_t storage = {0};
+    prop_io_t storage = {0};
     if (prop_unix_storage(&storage, g_server, true)) {
         return -1;
     }
@@ -100,7 +100,7 @@ static int command_set(int argc, char *argv[]) {
     }
 
     int       ret     = 0;
-    storage_t storage = {0};
+    prop_io_t storage = {0};
     if (prop_unix_storage(&storage, g_server, true)) {
         return -1;
     }
@@ -127,7 +127,7 @@ static int command_del(int argc, char *argv[]) {
     }
 
     int       ret     = 0;
-    storage_t storage = {0};
+    prop_io_t storage = {0};
     if (prop_unix_storage(&storage, g_server, true)) {
         return -1;
     }

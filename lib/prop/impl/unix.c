@@ -28,12 +28,12 @@
  *  SOFTWARE.
  */
 
-#include "builtin.h"
-#include "global.h"
+#include "../global.h"
+#include "io_package.h"
 #include "misc.h"
-#include "shared/io_package.h"
 #include <errno.h>
 #include <fcntl.h>
+#include <prop/impl/unix.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <sys/socket.h>
@@ -344,7 +344,7 @@ static void destructor(priv_t *priv) {
     free(priv);
 }
 
-int prop_unix_storage(storage_t *ctx, const char *name, bool shared) {
+int prop_unix_storage(prop_io_t *ctx, const char *name, bool shared) {
     if (!(ctx->name = strdup(name))) {
         logfE(logFmtHead "fail to allocate name" logFmtErrno, logArgErrno);
         return errno;
@@ -382,7 +382,7 @@ int prop_unix_storage(storage_t *ctx, const char *name, bool shared) {
     return 0;
 }
 
-static int parse(storage_t *ctx, const char *name, const char **args) {
+static int parse(prop_io_t *ctx, const char *name, const char **args) {
     const char *type_s = args[0];
     bool        shared = false;
 
@@ -394,7 +394,7 @@ static int parse(storage_t *ctx, const char *name, const char **args) {
     return prop_unix_storage(ctx, name, shared);
 }
 
-storage_parseConfig_t prop_unix_parseConfig = {
+prop_io_parseConfig_t prop_unix_parseConfig = {
     .name    = "unix",
     .argName = "[<TYPE>],",
     .note    = "注册类型为unix的存储（与通过--children注册不同的是：不需要child具有ctrl "

@@ -42,14 +42,14 @@
 #include <unistd.h>
 
 struct route_item {
-    storage_t    storage; /* Note: cannot be a pointer, see `route_deref` */
+    prop_io_t    storage; /* Note: cannot be a pointer, see `route_deref` */
     const char **prefix;
     atomic_int   nref;
     LIST_ENTRY(route_item) entry;
 };
 typedef struct route_item route_item_t;
 
-void *route_item_create(const storage_t *storage, uint32_t num_prefix, const char *prefix[]) {
+void *route_item_create(const prop_io_t *storage, uint32_t num_prefix, const char *prefix[]) {
     route_item_t *item = malloc(sizeof(route_item_t));
     if (!item) return NULL;
     if (!(item->prefix = arraydup_cstring(prefix, num_prefix))) {
@@ -92,7 +92,7 @@ void route_list_destroy(void *_list) {
     free(list);
 }
 
-int route_list_register(void *_list, const storage_t *storage, uint32_t num_prefix, const char *prefix[]) {
+int route_list_register(void *_list, const prop_io_t *storage, uint32_t num_prefix, const char *prefix[]) {
     struct route_list *list = _list;
     route_item_t      *temp = NULL;
 
@@ -182,7 +182,7 @@ void route_destroy(void *_route) {
     logfI("[route] destroyed");
 }
 
-int route_register(void *_route, const storage_t *storage, uint32_t num_prefix, const char *prefix[]) {
+int route_register(void *_route, const prop_io_t *storage, uint32_t num_prefix, const char *prefix[]) {
     route_t *route = _route;
     pthread_rwlock_wrlock(&route->rwlock);
     int ret = route_list_register(route->list, storage, num_prefix, prefix);
@@ -200,7 +200,7 @@ int route_unregister(void *_route, const char *name) {
     return ret;
 }
 
-int route_match(void *_route, const char *key, const storage_t **storage) {
+int route_match(void *_route, const char *key, const prop_io_t **storage) {
     route_t      *route = _route;
     int           ret   = 0;
     route_item_t *item  = NULL;
@@ -227,7 +227,7 @@ exit:
     return ret;
 }
 
-void route_deref(const storage_t *storage) {
+void route_deref(const prop_io_t *storage) {
     route_item_t *item = (route_item_t *)((char *)storage - offsetof(route_item_t, storage));
     atomic_fetch_sub(&item->nref, 1);
 }

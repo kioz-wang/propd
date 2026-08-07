@@ -1,5 +1,5 @@
 /**
- * @file storage.c
+ * @file io.c
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
@@ -28,21 +28,21 @@
  *  SOFTWARE.
  */
 
-#include "storage.h"
+#include <prop/io.h>
 #include "global.h"
 #include <errno.h>
 
-#define logFmtHead "[storage::%s] "
-#define logArgHead storage->name
+#define logFmtHead "[io::%s] "
+#define logArgHead io->name
 
-int prop_storage_get(const storage_t *storage, const char *key, const value_t **value, timestamp_t *duration) {
+int prop_storage_get(const prop_io_t *io, const char *key, const value_t **value, timestamp_t *duration) {
     assert(key);
     assert(value);
-    if (!storage->get) return EOPNOTSUPP;
+    if (!io->get) return EOPNOTSUPP;
 
     timestamp_t _duration;
 
-    int ret = storage->get(storage->priv, key, value, &_duration);
+    int ret = io->get(io->priv, key, value, &_duration);
     if (ret) {
         logfE(logFmtHead "fail to get " logFmtKey logFmtErrno, logArgHead, key, logArgErrno_(ret));
         return ret;
@@ -57,21 +57,21 @@ int prop_storage_get(const storage_t *storage, const char *key, const value_t **
     return 0;
 }
 
-int prop_storage_info(const storage_t *storage, const char *key, range_t *range, char **help_message, char ***chain) {
+int prop_storage_info(const prop_io_t *io, const char *key, range_t *range, char **help_message, char ***chain) {
     assert(key);
 
     return 0;
 }
 
-int prop_storage_set(const storage_t *storage, const char *key, const value_t *value) {
+int prop_storage_set(const prop_io_t *io, const char *key, const value_t *value) {
     assert(key);
     assert(value);
-    if (!storage->set) return EOPNOTSUPP;
+    if (!io->set) return EOPNOTSUPP;
 
     char buffer[256] = {0};
     pd_value_fmt(buffer, sizeof(buffer), value, false);
 
-    int ret = storage->set(storage->priv, key, value);
+    int ret = io->set(io->priv, key, value);
     if (ret) {
         logfE(logFmtHead "fail to set " logFmtKey " as " logFmtValue logFmtErrno, logArgHead, key, buffer,
               logArgErrno_(ret));
@@ -82,11 +82,11 @@ int prop_storage_set(const storage_t *storage, const char *key, const value_t *v
     return 0;
 }
 
-int prop_storage_del(const storage_t *storage, const char *key) {
+int prop_storage_del(const prop_io_t *io, const char *key) {
     assert(key);
-    if (!storage->set) return EOPNOTSUPP;
+    if (!io->set) return EOPNOTSUPP;
 
-    int ret = storage->del(storage->priv, key);
+    int ret = io->del(io->priv, key);
     if (ret) {
         logfE(logFmtHead "fail to del " logFmtKey logFmtErrno, logArgHead, key, logArgErrno_(ret));
         return ret;
@@ -96,7 +96,7 @@ int prop_storage_del(const storage_t *storage, const char *key) {
     return ret;
 }
 
-void prop_storage_destructor(const storage_t *storage) {
-    if (storage->destructor) storage->destructor(storage->priv);
-    free((void *)storage->name);
+void prop_storage_destructor(const prop_io_t *io) {
+    if (io->destructor) io->destructor(io->priv);
+    free((void *)io->name);
 }

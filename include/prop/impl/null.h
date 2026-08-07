@@ -1,9 +1,9 @@
 /**
- * @file builtin.h
+ * @file null.h
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
- * @date 2025-12-15
+ * @date 2026-08-07
  *
  * @copyright MIT License
  *
@@ -28,20 +28,13 @@
  *  SOFTWARE.
  */
 
-#ifndef __PROPD_BRIDGE_H
-#define __PROPD_BRIDGE_H
+#ifndef __PROP_IMPL_NULL_H
+#define __PROP_IMPL_NULL_H
 
-#include "storage.h"
+#include "../io.h"
 
-int prop_null_storage(storage_t *ctx, const char *name);
-int prop_file_storage(storage_t *ctx, const char *name, const char *dir);
-int prop_unix_storage(storage_t *ctx, const char *name, bool shared);
-int prop_memory_storage(storage_t *ctx, const char *name, long phy, const void *layout);
-int prop_tcp_storage(storage_t *ctx, const char *name, const char *ip, unsigned short port);
+int prop_null_impl(prop_io_t *io, const char *name);
 
-extern storage_parseConfig_t prop_file_parseConfig;
-extern storage_parseConfig_t prop_unix_parseConfig;
-extern storage_parseConfig_t prop_memory_parseConfig;
-extern storage_parseConfig_t prop_tcp_parseConfig;
+extern prop_io_parseConfig_t prop_null_parseConfig;
 
-#endif /* __PROPD_BRIDGE_H */
+#endif /* __PROP_IMPL_NULL_H */

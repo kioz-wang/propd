@@ -28,8 +28,8 @@
  *  SOFTWARE.
  */
 
-#include "builtin.h"
-#include "global.h"
+#include "../global.h"
+#include <prop/impl/memory.h>
 #include "memio/layout.h"
 #include <errno.h>
 #include <fcntl.h>
@@ -70,7 +70,7 @@ static int memory_get(const priv_t *priv, const char *key, const value_t **value
     return 0;
 }
 
-int prop_memory_storage(storage_t *ctx, const char *name, long phy, const void *layout) {
+int prop_memory_storage(prop_io_t *ctx, const char *name, long phy, const void *layout) {
     if (!(ctx->name = strdup(name))) {
         logfE(logFmtHead "fail to allocate name" logFmtErrno, logArgErrno);
         return errno;
@@ -110,7 +110,7 @@ int prop_memory_storage(storage_t *ctx, const char *name, long phy, const void *
     return 0;
 }
 
-static int parse(storage_t *ctx, const char *name, const char **args) {
+static int parse(prop_io_t *ctx, const char *name, const char **args) {
     int    ret    = 0;
     long   phy    = strtoul(args[0], NULL, 16);
     pos_t *layout = layout_parse(args[1]);
@@ -124,7 +124,7 @@ static int parse(storage_t *ctx, const char *name, const char **args) {
     return ret;
 }
 
-storage_parseConfig_t prop_memory_parseConfig = {
+prop_io_parseConfig_t prop_memory_parseConfig = {
     .name    = "memory",
     .argName = "<PHY>,<LAYOUT>,",
     .note    = "注册类型为memory的存储。PHY是内存地址，LAYOUT是描述内存布局的json文件",

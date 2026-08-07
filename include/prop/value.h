@@ -28,8 +28,8 @@
  *  SOFTWARE.
  */
 
-#ifndef __PROPD_VALUE_H
-#define __PROPD_VALUE_H
+#ifndef __VALUE_H
+#define __VALUE_H
 
 #include <assert.h>
 #include <stdbool.h>
@@ -130,22 +130,4 @@ static inline _value_to(u64, uint64_t);
 static inline _value_to(float, float);
 static inline _value_to(double, double);
 
-/**
- * @brief Parse and allocate a value from a cstring
- *
- * @param str
- * @return value_t* On error, return NULL and set errno (ENOMEM EINVAL)
- */
-value_t *pd_value_parse(const char *str);
-/**
- * @brief Format a value (Only for logging, due to potential truncation)
- *
- * @param buffer
- * @param length
- * @param value
- * @param notype
- * @return const char* Always return a pointer to buffer
- */
-const char *pd_value_fmt(char *buffer, size_t length, const value_t *value, bool notype);
-
-#endif /* __PROPD_VALUE_H */
+#endif /* __VALUE_H */

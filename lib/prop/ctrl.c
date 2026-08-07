@@ -29,8 +29,8 @@
  */
 
 #define _GNU_SOURCE
-#include "prop.h"
-#include "shared/ctrl_package.h"
+#include <prop/control.h>
+#include "ctrl_package.h"
 #include "global.h"
 #include "misc.h"
 #include <assert.h>

@@ -37,7 +37,7 @@
 
 struct cleanup_ctx {
     void            *nmtx_ns;
-    const storage_t *storage;
+    const prop_io_t *storage;
     const char      *key;
 };
 typedef struct cleanup_ctx cleanup_ctx_t;
@@ -101,7 +101,7 @@ exit:
     return ret;
 }
 
-int io_update(const io_ctx_t *io, const char *key, const storage_t *storage) {
+int io_update(const io_ctx_t *io, const char *key, const prop_io_t *storage) {
     int            ret   = 0;
     const value_t *value = NULL;
     timestamp_t    duration;

@@ -42,7 +42,7 @@
  * @param prefix (ref. array of arraydup_cstring)
  * @return route_item_t* On error, return NULL and set errno
  */
-void *route_item_create(const storage_t *storage, uint32_t num_prefix, const char *prefix[]);
+void *route_item_create(const prop_io_t *storage, uint32_t num_prefix, const char *prefix[]);
 /**
  * @brief Release an item of route
  *
@@ -52,7 +52,7 @@ void route_item_destroy(void *item);
 
 void *route_list_create(void);
 void  route_list_destroy(void *list);
-int   route_list_register(void *_list, const storage_t *storage, uint32_t num_prefix, const char *prefix[]);
+int   route_list_register(void *_list, const prop_io_t *storage, uint32_t num_prefix, const char *prefix[]);
 int   route_list_unregister(void *_list, const char *name);
 
 /**
@@ -84,7 +84,7 @@ void route_init(void *_route, void *_first);
  * @param prefix (ref. array of arraydup_cstring)
  * @return int errno (EEXIST ENOMEM)
  */
-int route_register(void *route, const storage_t *storage, uint32_t num_prefix, const char *prefix[]);
+int route_register(void *route, const prop_io_t *storage, uint32_t num_prefix, const char *prefix[]);
 /**
  * @brief Unregister a route item by name（如果表项仍被引用，则无法注销）
  *
@@ -101,7 +101,7 @@ int route_unregister(void *route, const char *name);
  * @param storage 返回存储上下文，并增加该表项的引用计数
  * @return int errno (ENOENT)
  */
-int route_match(void *route, const char *key, const storage_t **storage);
+int route_match(void *route, const char *key, const prop_io_t **storage);
 
 /**
  * @brief 减少存储上下文所在表项的引用计数
@@ -109,6 +109,6 @@ int route_match(void *route, const char *key, const storage_t **storage);
  * @param route
  * @param storage
  */
-void route_deref(const storage_t *storage);
+void route_deref(const prop_io_t *storage);
 
 #endif /* __PROPD_ROUTE_H */

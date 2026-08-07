@@ -1,5 +1,5 @@
 /**
- * @file main.c
+ * @file run.h
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
@@ -28,32 +28,21 @@
  *  SOFTWARE.
  */
 
-#include "propd/builtin.h"
-#include "propd/misc.h"
-#include "propd/propd.h"
+#ifndef __PROP_IO_H
+#error "Please include prop/io.h first."
+#endif
 
-int main(int argc, char *argv[]) {
-    int            ret        = 0;
-    prop_io_t  storage    = {0};
-    const char    *prefixes[] = {"*", NULL};
-    propd_config_t config;
+#ifndef __PROPD_RUN_H
+#define __PROPD_RUN_H
 
-    propd_config_default(&config);
+#include <stdint.h>
 
-    config.logger.envname_stderr = "propd_log2stderr";
+void *propd_config_default(void);
+int  propd_config_register(void *config, const prop_io_t *io, uint32_t num_prefix, const char *prefix[]);
 
-    propd_config_apply_parser(&config, &prop_file_parseConfig);
-    propd_config_apply_parser(&config, &prop_unix_parseConfig);
-    propd_config_apply_parser(&config, &prop_memory_parseConfig);
-    propd_config_apply_parser(&config, &prop_tcp_parseConfig);
+void propd_config_apply_parser(void *config, prop_io_parseConfig_t *parseConfig);
+void propd_config_parse(void *config, int argc, char *argv[]);
 
-    pd_attach_wait("propd_attach", '.', 2);
-    propd_config_parse(&config, argc, argv);
+int propd_run(const void *config);
 
-    ret = prop_null_storage(&storage, "null");
-    if (ret) return ret;
-    ret = propd_config_register(&config, &storage, 0, prefixes);
-    if (ret) return ret;
-
-    return propd_run(&config);
-}
+#endif /* __PROPD_RUN_H */
