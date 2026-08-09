@@ -149,7 +149,7 @@ int unix_recv_cstring(int connfd, char **__cstring) {
     } while (true);
 }
 
-static void io_begin(int connfd, io_type_t type, const char *key, const value_t *value) {
+static void io_begin(int connfd, io_cmd_t type, const char *key, const value_t *value) {
     ssize_t      n __attribute__((unused));
     io_package_t pkg_head = {.type = type, .created = timestamp(true)};
 

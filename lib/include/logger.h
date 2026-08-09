@@ -1,13 +1,13 @@
 /**
- * @file global.h
+ * @file logger.h
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
- * @date 2025-12-04
+ * @date 2026-08-09
  *
  * @copyright MIT License
  *
- *  Copyright (c) 2025 kioz.wang
+ *  Copyright (c) 2026 kioz.wang
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
@@ -28,33 +28,21 @@
  *  SOFTWARE.
  */
 
-#ifndef __PROPD_GLOBAL_H
-#define __PROPD_GLOBAL_H
+#ifndef __PROP_LOGGER_H
+#define __PROP_LOGGER_H
 
-#include "logger.h"
 #include <errno.h>
+#include <mlogger/logger.h>
 #include <string.h>
 
 extern mlogger_t g_logger;
 
-#define logfE(fmt, ...) mlogf(&g_logger, MLOG_ERRO, fmt, ##__VA_ARGS__)
-#define logfW(fmt, ...) mlogf(&g_logger, MLOG_WARN, fmt, ##__VA_ARGS__)
-#define logfI(fmt, ...) mlogf(&g_logger, MLOG_INFO, fmt, ##__VA_ARGS__)
-#define logfV(fmt, ...) mlogf(&g_logger, MLOG_VERB, fmt, ##__VA_ARGS__)
-#define logfD(fmt, ...) mlogf(&g_logger, MLOG_DEBG, fmt, ##__VA_ARGS__)
+#define logfE(err, fmt, ...)     mlogf(&g_logger, MLOG_ERRO, fmt " (%d)", ##__VA_ARGS__, err)
+#define logfE_std(err, fmt, ...) mlogf(&g_logger, MLOG_ERRO, fmt " (%d:%s)", ##__VA_ARGS__, err, strerror(err))
+#define logfW(err, fmt, ...)     mlogf(&g_logger, MLOG_WARN, fmt " (%d)", ##__VA_ARGS__, err)
+#define logfW_std(err, fmt, ...) mlogf(&g_logger, MLOG_WARN, fmt " (%d:%s)", ##__VA_ARGS__, err, strerror(err))
+#define logfI(fmt, ...)          mlogf(&g_logger, MLOG_INFO, fmt, ##__VA_ARGS__)
+#define logfV(fmt, ...)          mlogf(&g_logger, MLOG_VERB, fmt, ##__VA_ARGS__)
+#define logfD(fmt, ...)          mlogf(&g_logger, MLOG_DEBG, fmt, ##__VA_ARGS__)
 
-extern const char *g_at;
-
-#define PathFmt_CtrlServer "%s/propd.%s.ctrl"
-#define PathFmt_IOServer   "%s/propd.%s.io"
-#define PathFmt_CtrlClient "%s/prop.%s.ctrl"
-#define PathFmt_IOClient   "%s/prop.%s.io"
-
-#define logFmtRet       " (%d)"
-#define logFmtErrno     " (%d:%s)"
-#define logArgErrno     errno, strerror(errno)
-#define logArgErrno_(e) (e), strerror(e)
-#define logFmtKey       "<%s>"
-#define logFmtValue     "\"%s\""
-
-#endif /* __PROPD_GLOBAL_H */
+#endif /* __PROP_LOGGER_H */

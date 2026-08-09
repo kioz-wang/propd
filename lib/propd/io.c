@@ -42,7 +42,7 @@
 
 #define logFmtHead "[server::io] "
 
-static int cred_check(const void *credbook, const struct ucred *cred, io_type_t type, const char *key) {
+static int cred_check(const void *credbook, const struct ucred *cred, io_cmd_t type, const char *key) {
     int ret = 0;
     /* TODO */
     return ret;

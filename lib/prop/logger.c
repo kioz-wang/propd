@@ -1,5 +1,5 @@
 /**
- * @file global.c
+ * @file logger.c
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
@@ -28,17 +28,17 @@
  *  SOFTWARE.
  */
 
-#include "global.h"
+#include "logger.h"
 #include <stdlib.h>
 
-const char *g_at = "/tmp";
+// const char *g_at = "/tmp";
 
-static void __attribute__((constructor)) __env_parse(void) {
-    const char *namespace_s = getenv("propd_namespace");
-    if (namespace_s && namespace_s[0]) {
-        g_at = namespace_s;
-    }
-}
+// static void __attribute__((constructor)) __env_parse(void) {
+//     const char *namespace_s = getenv("propd_namespace");
+//     if (namespace_s && namespace_s[0]) {
+//         g_at = namespace_s;
+//     }
+// }
 
 mlogger_t g_logger;
 

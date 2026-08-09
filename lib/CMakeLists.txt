@@ -11,6 +11,7 @@ add_link_options(
 include_directories(
     PUBLIC  ../include
     PRIVATE include
+    PRIVATE ../vendor
 )
 
 # ── vendor sources ────────────────────────────────────────────────────
@@ -29,10 +30,6 @@ file(GLOB_RECURSE LIBPROP_SOURCES CONFIGURE_DEPENDS
 message(STATUS "libprop source list => ${LIBPROP_SOURCES}")
 
 add_library(libprop SHARED ${LIBPROP_SOURCES} ${VENDOR_MLOGGER_SOURCES} ${VENDOR_MEMIO_SOURCES})
-target_include_directories(libprop
-    PRIVATE ../vendor/mlogger
-    PRIVATE ../vendor
-)
 target_compile_definitions(libprop PRIVATE _GNU_SOURCE)
 target_link_libraries(libprop cjson)
 

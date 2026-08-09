@@ -1,5 +1,5 @@
 /**
- * @file io_package.h
+ * @file io.h
  * @author kioz.wang (never.had@outlook.com)
  * @brief IO protocol wire-format types (shared between client & server)
  * @version 0.1
@@ -18,16 +18,16 @@
 #include <prop/value.h>
 #include <stdint.h>
 
-enum io_type {
+enum io_cmd {
     _io_get = 0,
     _io_set,
     _io_del,
     _io_info,
 };
-typedef uint8_t io_type_t;
+typedef uint8_t io_cmd_t;
 
 struct io_package {
-    io_type_t   type;
+    io_cmd_t   type;
     timestamp_t created;
     char        key[NAME_MAX];
     value_t     value;
