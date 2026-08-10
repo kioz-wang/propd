@@ -28,14 +28,10 @@
  *  SOFTWARE.
  */
 
+#include "logger.h"
 #include <prop/io.h>
-#include "global.h"
-#include <errno.h>
 
-#define logFmtHead "[io::%s] "
-#define logArgHead io->name
-
-int prop_storage_get(const prop_io_t *io, const char *key, const value_t **value, timestamp_t *duration) {
+int prop_get(const prop_io_t *io, const char *key, const value_t **value, timestamp_t *duration) {
     assert(key);
     assert(value);
     if (!io->get) return EOPNOTSUPP;
@@ -44,59 +40,67 @@ int prop_storage_get(const prop_io_t *io, const char *key, const value_t **value
 
     int ret = io->get(io->priv, key, value, &_duration);
     if (ret) {
-        logfE(logFmtHead "fail to get " logFmtKey logFmtErrno, logArgHead, key, logArgErrno_(ret));
+        logfE_std(ret, "[io::%s] fail to get <%s>", io->name, key);
         return ret;
     }
 
     if (duration) *duration = _duration;
     char buffer[256] = {0};
     char buffer1[32] = {0};
-    pd_value_fmt(buffer, sizeof(buffer), *value, false);
+    prop_value_fmt(buffer, sizeof(buffer), *value, false);
     duration_fmt(buffer1, sizeof(buffer1), _duration);
-    logfI(logFmtHead "get " logFmtKey " is " logFmtValue " with duration %s", logArgHead, key, buffer, buffer1);
+    logfI("[io::%s] get <%s> is {%s} with duration %s", io->name, key, buffer, buffer1);
     return 0;
 }
 
-int prop_storage_info(const prop_io_t *io, const char *key, range_t *range, char **help_message, char ***chain) {
-    assert(key);
-
-    return 0;
-}
-
-int prop_storage_set(const prop_io_t *io, const char *key, const value_t *value) {
+int prop_set(const prop_io_t *io, const char *key, const value_t *value) {
     assert(key);
     assert(value);
     if (!io->set) return EOPNOTSUPP;
 
     char buffer[256] = {0};
-    pd_value_fmt(buffer, sizeof(buffer), value, false);
+    prop_value_fmt(buffer, sizeof(buffer), value, false);
 
     int ret = io->set(io->priv, key, value);
     if (ret) {
-        logfE(logFmtHead "fail to set " logFmtKey " as " logFmtValue logFmtErrno, logArgHead, key, buffer,
-              logArgErrno_(ret));
+        logfE_std(ret, "[io::%s] fail to set <%s> as {%s}", io->name, key, buffer);
         return ret;
     }
 
-    logfI(logFmtHead "set " logFmtKey " as " logFmtValue, logArgHead, key, buffer);
+    logfI("[io::%s] set <%s> as {%s}", io->name, key, buffer);
     return 0;
 }
 
-int prop_storage_del(const prop_io_t *io, const char *key) {
+int prop_del(const prop_io_t *io, const char *key) {
     assert(key);
-    if (!io->set) return EOPNOTSUPP;
+    if (!io->del) return EOPNOTSUPP;
 
     int ret = io->del(io->priv, key);
     if (ret) {
-        logfE(logFmtHead "fail to del " logFmtKey logFmtErrno, logArgHead, key, logArgErrno_(ret));
+        logfE_std(ret, "[io::%s] fail to del <%s>", io->name, key);
         return ret;
     }
 
-    logfI(logFmtHead "del " logFmtKey, logArgHead, key);
-    return ret;
+    logfI("[io::%s] del <%s>", io->name, key);
+    return 0;
 }
 
-void prop_storage_destructor(const prop_io_t *io) {
+int prop_info(const prop_io_t *io, const char *key, const char **info) {
+    assert(key);
+    assert(info);
+    if (!io->info) return EOPNOTSUPP;
+
+    int ret = io->info(io->priv, key, info);
+    if (ret) {
+        logfE_std(ret, "[io::%s] fail to info <%s>", io->name, key);
+        return ret;
+    }
+
+    logfI("[io::%s] info <%s>", io->name, key);
+    return 0;
+}
+
+void prop_io_destructor(const prop_io_t *io) {
     if (io->destructor) io->destructor(io->priv);
     free((void *)io->name);
 }

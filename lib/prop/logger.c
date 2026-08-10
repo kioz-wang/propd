@@ -42,8 +42,10 @@
 
 mlogger_t g_logger;
 
+void __attribute__((__weak__)) prop_log_f(const char *msg) { (void)msg; }
+
 static void __attribute__((constructor)) __logger_init(void) {
-    mlog_init(&g_logger, MLOG_ERRO, NULL, NULL, MLOG_FMT_NEWLINE, NULL,
+    mlog_init(&g_logger, MLOG_ERRO, prop_log_f, NULL, MLOG_FMT_NEWLINE, NULL,
               MLOG_FMT_COLOR | MLOG_FMT_TIMESTAMP | MLOG_FMT_LEVEL_HEAD | MLOG_FMT_NEWLINE);
     mlog_enable_stderr(&g_logger, MLOG_DEBG);
 }

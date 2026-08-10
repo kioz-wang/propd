@@ -1,5 +1,5 @@
 /**
- * @file ctrl_client.c
+ * @file control.c
  * @author kioz.wang (never.had@outlook.com)
  * @brief
  * @version 0.1
@@ -29,12 +29,11 @@
  */
 
 #define _GNU_SOURCE
-#include <prop/control.h>
-#include "ctrl_package.h"
-#include "global.h"
+#include "protocol/control.h"
+#include "logger.h"
 #include "misc.h"
 #include <assert.h>
-#include <errno.h>
+#include <prop/control.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>

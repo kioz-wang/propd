@@ -1,5 +1,5 @@
 /**
- * @file ctrl_package.h
+ * @file control.h
  * @author kioz.wang (never.had@outlook.com)
  * @brief Control protocol wire-format types (shared between client & server)
  * @version 0.1
@@ -10,8 +10,8 @@
  *  Copyright (c) 2025 kioz.wang
  */
 
-#ifndef __PROPD_CTRL_PACKAGE_H
-#define __PROPD_CTRL_PACKAGE_H
+#ifndef __PROP_PROTOCOL_CONTROL_H
+#define __PROP_PROTOCOL_CONTROL_H
 
 #include <linux/limits.h>
 #include <stdint.h>
@@ -42,4 +42,4 @@ struct ctrl_package {
 } __attribute__((packed));
 typedef struct ctrl_package ctrl_package_t;
 
-#endif /* __PROPD_CTRL_PACKAGE_H */
+#endif /* __PROP_PROTOCOL_CONTROL_H */

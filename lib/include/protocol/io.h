@@ -10,8 +10,8 @@
  *  Copyright (c) 2025 kioz.wang
  */
 
-#ifndef __PROPD_IO_PACKAGE_H
-#define __PROPD_IO_PACKAGE_H
+#ifndef __PROP_PROTOCOL_IO_H
+#define __PROP_PROTOCOL_IO_H
 
 #include <linux/limits.h>
 #include <prop/timestamp.h>
@@ -34,4 +34,4 @@ struct io_package {
 } __attribute__((packed));
 typedef struct io_package io_package_t;
 
-#endif /* __PROPD_IO_PACKAGE_H */
+#endif /* __PROP_PROTOCOL_IO_H */

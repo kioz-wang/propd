@@ -89,6 +89,7 @@ int prop_del(const prop_io_t *io, const char *key);
  * @param key
  * @param info
  * @return int
+ * @note TODO 需要返回传递链。
  */
 int prop_info(const prop_io_t *io, const char *key, const char **info);
 /**
